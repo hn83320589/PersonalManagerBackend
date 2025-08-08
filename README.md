@@ -14,7 +14,7 @@
 
 1. **Clone 專案**
    ```bash
-   git clone https://github.com/[username]/personal-manager-backend.git
+   git clone https://github.com/hn83320589/PersonalManagerBackend.git
    cd personal-manager-backend
    ```
 
@@ -178,9 +178,9 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ## 📞 相關連結
 
-- [主專案倉庫](https://github.com/[username]/personal-manager)
-- [前端專案倉庫](https://github.com/[username]/personal-manager-frontend)
-- [專案文檔](https://github.com/[username]/personal-manager/blob/main/docs/)
+- [主專案倉庫](https://github.com/hn83320589/personal_manager)
+- [前端專案倉庫](https://github.com/hn83320589/PersonalManagerFrontend)
+- [專案文檔](https://github.com/hn83320589/personal_manager/blob/main/docs/)
 
 ## 📄 授權
 

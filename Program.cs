@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PersonalManagerAPI.Data;
+using PersonalManagerAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,10 +9,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure Entity Framework
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+// Configure Entity Framework (commented out for JSON data service)
+// var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+// Add JSON Data Service for development
+builder.Services.AddScoped<JsonDataService>();
+
+// Add File Service for media handling
+builder.Services.AddScoped<IFileService, FileService>();
 
 // Configure CORS for frontend
 builder.Services.AddCors(options =>
@@ -35,6 +42,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Enable static files for file uploads
+app.UseStaticFiles();
+
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();

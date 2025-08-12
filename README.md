@@ -7,8 +7,8 @@
 ### 前置需求
 
 - .NET 9.0 SDK
-- MariaDB/MySQL 資料庫
 - Visual Studio Code 或 Visual Studio
+- (MariaDB/MySQL 資料庫 - 未來選項，目前使用 JSON 模擬資料)
 
 ### 安裝與執行
 
@@ -23,12 +23,10 @@
    dotnet restore
    ```
 
-3. **設定資料庫**
-   - 更新 `appsettings.json` 中的資料庫連接字串
-   - 執行資料庫遷移：
-     ```bash
-     dotnet ef database update
-     ```
+3. **資料存取設定**
+   - 目前使用 JSON 模擬資料，無需資料庫設定
+   - JSON 資料檔案位於 `Data/Json/` 目錄
+   - 未來可更新 `appsettings.json` 連接真實資料庫
 
 4. **執行專案**
    ```bash
@@ -36,16 +34,17 @@
    ```
 
 5. **存取 API**
-   - API 基礎路徑: `http://localhost:5000/api`
-   - Swagger 文檔: `http://localhost:5000/swagger`
+   - API 基礎路徑: `http://localhost:5002/api`
+   - Swagger 文檔: `http://localhost:5002/swagger`
+   - 如果埠口衝突，可使用: `dotnet run --urls "http://localhost:5002"`
 
 ## 🛠️ 技術架構
 
 - **框架**: ASP.NET Core 9.0 Web API
-- **ORM**: Entity Framework Core 9.0.8
-- **資料庫**: MariaDB with Pomelo.EntityFrameworkCore.MySql
-- **文檔**: Swagger/OpenAPI (Swashbuckle)
-- **測試**: xUnit (計劃中)
+- **資料存取**: JsonDataService (目前) + Entity Framework Core 9.0.8 (未來)
+- **資料庫**: JSON 模擬資料 + MariaDB 支援 (Pomelo.EntityFrameworkCore.MySql)
+- **文檔**: Swagger/OpenAPI + 完整 API 文檔 + Postman Collection
+- **測試**: xUnit 基礎測試 + 手動整合測試
 
 ## 📁 專案結構
 
@@ -88,31 +87,48 @@ dotnet add package PackageName
 ## 🌟 主要功能
 
 - [x] 基本API架構設定
-- [x] Entity Framework Core 設定
-- [x] Swagger API 文檔
+- [x] Entity Framework Core 設定 + JsonDataService
+- [x] Swagger API 文檔 + 完整技術文件
 - [x] CORS 跨域設定
-- [ ] JWT 身份驗證
-- [ ] 使用者管理 API
-- [ ] 個人資料管理 API
-- [ ] 部落格管理 API
-- [ ] 任務管理 API
-- [ ] 行事曆管理 API
+- [x] 使用者管理 API (UsersController)
+- [x] 個人資料管理 API (PersonalProfilesController)
+- [x] 學經歷管理 API (EducationsController + WorkExperiencesController)
+- [x] 技能管理 API (SkillsController)
+- [x] 作品集 API (PortfoliosController)
+- [x] 行事曆管理 API (CalendarEventsController)
+- [x] 任務管理 API (TodoItemsController + WorkTasksController)
+- [x] 部落格管理 API (BlogPostsController)
+- [x] 留言管理 API (GuestBookEntriesController)
+- [x] 聯絡方式 API (ContactMethodsController)
+- [x] 檔案上傳 API (FilesController)
+- [ ] JWT 身份驗證 (計劃中)
 
-## 📋 API 端點
+## 📋 API 端點概覽
 
-### 認證
+### 核心功能 API (已完成)
+- `GET /api/users` - 使用者管理 (CRUD)
+- `GET /api/personalprofiles` - 個人資料管理
+- `GET /api/educations` - 學歷管理
+- `GET /api/workexperiences` - 工作經歷管理
+- `GET /api/skills` - 技能管理
+- `GET /api/portfolios` - 作品集管理
+- `GET /api/calendarevents` - 行事曆管理
+- `GET /api/todoitems` - 待辦事項管理
+- `GET /api/worktasks` - 工作追蹤
+- `GET /api/blogposts` - 部落格管理
+- `GET /api/guestbookentries` - 留言板管理
+- `GET /api/contactmethods` - 聯絡方式管理
+- `POST /api/files/upload` - 檔案上傳
+
+### 認證 API (計劃中)
 - `POST /api/auth/login` - 使用者登入
 - `POST /api/auth/logout` - 使用者登出
 
-### 使用者管理
-- `GET /api/users/profile` - 取得使用者資料
-- `PUT /api/users/profile` - 更新使用者資料
-
-### 個人資料
-- `GET /api/profile` - 取得個人檔案
-- `PUT /api/profile` - 更新個人檔案
-
-*更多API端點請參考 Swagger 文檔*
+**詳細API文檔**: 
+- [完整API技術文檔](../../docs/api-documentation.md)
+- [API快速參考](../../docs/api-quick-reference.md)
+- [Postman Collection](../../docs/PersonalManager-API.postman_collection.json)
+- [Swagger文檔](http://localhost:5002/swagger)
 
 ## 🔒 環境設定
 

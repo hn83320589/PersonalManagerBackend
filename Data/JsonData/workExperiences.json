@@ -1,0 +1,32 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "Company": "ABC科技公司",
+    "Position": "資深全端工程師",
+    "StartDate": "2020-03-01T00:00:00Z",
+    "EndDate": null,
+    "IsCurrent": true,
+    "Description": "負責企業級應用系統開發與維護，主導多個重點專案的架構設計與技術選型。使用 .NET Core 開發高效能API服務，並以 Vue.js 構建現代化前端應用。參與敏捷開發流程，與產品經理、UI/UX設計師密切協作。",
+    "Achievements": "• 主導開發的CRM系統提升業務效率30%\n• 重構舊有系統，降低維護成本50%\n• 建立自動化部署流程，縮短發布時間70%\n• 指導新進工程師，建立團隊技術文檔",
+    "IsPublic": true,
+    "SortOrder": 1,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "Company": "XYZ軟體公司",
+    "Position": "後端工程師",
+    "StartDate": "2017-07-01T00:00:00Z",
+    "EndDate": "2020-02-28T00:00:00Z",
+    "IsCurrent": false,
+    "Description": "專職後端API開發與資料庫設計，負責電商平台核心業務邏輯實作。使用 ASP.NET Core 開發RESTful API，整合第三方支付系統、物流API等服務。參與資料庫效能調優與系統擴展性改善。",
+    "Achievements": "• 開發的API系統支援日均10萬次請求\n• 優化資料庫查詢，提升響應速度60%\n• 整合多家支付廠商，提高交易成功率\n• 建立完整的API文檔與測試覆蓋率達90%",
+    "IsPublic": true,
+    "SortOrder": 2,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  }
+]

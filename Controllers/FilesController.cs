@@ -27,7 +27,7 @@ public class FilesController : BaseController
         }
 
         var result = await _fileService.UploadFileAsync(file, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public class FilesController : BaseController
     public async Task<IActionResult> GetFile(int id)
     {
         var result = await _fileService.GetFileAsync(id);
-        return result.Success ? Ok(result) : NotFound(result);
+        return result.IsSuccess ? Ok(result) : NotFound(result);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public class FilesController : BaseController
     public async Task<IActionResult> UpdateFileInfo(int id, [FromBody] FileUploadRequestDto request)
     {
         var result = await _fileService.UpdateFileInfoAsync(id, request);
-        return result.Success ? Ok(result) : NotFound(result);
+        return result.IsSuccess ? Ok(result) : NotFound(result);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class FilesController : BaseController
     public async Task<IActionResult> DeleteFile(int id)
     {
         var result = await _fileService.DeleteFileAsync(id);
-        return result.Success ? Ok(result) : NotFound(result);
+        return result.IsSuccess ? Ok(result) : NotFound(result);
     }
 
     /// <summary>
@@ -117,6 +117,6 @@ public class FilesController : BaseController
     public async Task<IActionResult> ResizeImage(int id, [FromBody] ImageResizeRequestDto request)
     {
         var result = await _fileService.ResizeImageAsync(id, request.Width, request.Height, request.KeepAspectRatio);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 }

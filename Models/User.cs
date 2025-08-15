@@ -24,9 +24,41 @@ public class User
     [StringLength(50)]
     public string? LastName { get; set; }
     
+    /// <summary>
+    /// 全名 (FirstName + LastName 或單獨設定)
+    /// </summary>
+    [StringLength(100)]
+    public string? FullName { get; set; }
+    
     [Phone]
     [StringLength(20)]
     public string? Phone { get; set; }
+    
+    /// <summary>
+    /// 使用者角色
+    /// </summary>
+    [StringLength(20)]
+    public string Role { get; set; } = "User";
+    
+    /// <summary>
+    /// 重新整理令牌
+    /// </summary>
+    public string? RefreshToken { get; set; }
+    
+    /// <summary>
+    /// 重新整理令牌過期時間
+    /// </summary>
+    public DateTime? RefreshTokenExpiryTime { get; set; }
+    
+    /// <summary>
+    /// 最後登入時間
+    /// </summary>
+    public DateTime? LastLoginDate { get; set; }
+    
+    /// <summary>
+    /// 建立時間
+    /// </summary>
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     
     public bool IsActive { get; set; } = true;
     

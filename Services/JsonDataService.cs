@@ -47,6 +47,93 @@ public class JsonDataService
         await File.WriteAllTextAsync(filePath, jsonContent);
     }
 
+    // Generic CRUD methods for any entity type
+    public async Task<List<T>> GetAllAsync<T>()
+    {
+        var fileName = GetFileNameForType<T>();
+        return await ReadJsonAsync<T>(fileName);
+    }
+
+    public async Task<T?> GetByIdAsync<T>(int id) where T : class
+    {
+        var items = await GetAllAsync<T>();
+        return items.FirstOrDefault(item => GetId(item) == id);
+    }
+
+    public async Task<T> CreateAsync<T>(T item) where T : class
+    {
+        var items = await GetAllAsync<T>();
+        SetId(item, items.Count > 0 ? items.Max(x => GetId(x)) + 1 : 1);
+        items.Add(item);
+        await SaveAllAsync(items);
+        return item;
+    }
+
+    public async Task<T?> UpdateAsync<T>(T item) where T : class
+    {
+        var items = await GetAllAsync<T>();
+        var index = items.FindIndex(x => GetId(x) == GetId(item));
+        if (index >= 0)
+        {
+            items[index] = item;
+            await SaveAllAsync(items);
+            return item;
+        }
+        return null;
+    }
+
+    public async Task<bool> DeleteAsync<T>(int id) where T : class
+    {
+        var items = await GetAllAsync<T>();
+        var item = items.FirstOrDefault(x => GetId(x) == id);
+        if (item != null)
+        {
+            items.Remove(item);
+            await SaveAllAsync(items);
+            return true;
+        }
+        return false;
+    }
+
+    private async Task SaveAllAsync<T>(List<T> items)
+    {
+        var fileName = GetFileNameForType<T>();
+        await WriteJsonAsync(fileName, items);
+    }
+
+    private string GetFileNameForType<T>()
+    {
+        var typeName = typeof(T).Name.ToLower();
+        return typeName switch
+        {
+            "user" => "users.json",
+            "personalprofile" => "personalProfiles.json",
+            "education" => "educations.json",
+            "workexperience" => "workExperiences.json",
+            "skill" => "skills.json",
+            "portfolio" => "portfolios.json",
+            "calendarevent" => "calendarEvents.json",
+            "worktask" => "workTasks.json",
+            "todoitem" => "todoItems.json",
+            "blogpost" => "blogPosts.json",
+            "guestbookentry" => "guestBookEntries.json",
+            "contactmethod" => "contactMethods.json",
+            _ => $"{typeName}s.json"
+        };
+    }
+
+    private int GetId<T>(T item)
+    {
+        var idProperty = typeof(T).GetProperty("Id");
+        return idProperty?.GetValue(item) as int? ?? 0;
+    }
+
+    private void SetId<T>(T item, int id)
+    {
+        var idProperty = typeof(T).GetProperty("Id");
+        idProperty?.SetValue(item, id);
+    }
+
     // Specific methods for each entity type
     public async Task<List<User>> GetUsersAsync()
     {

@@ -9,26 +9,31 @@ public class FileService : IFileService
     private readonly JsonDataService _dataService;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FileService> _logger;
+    private readonly IFileSecurityService _fileSecurityService;
     private readonly string[] _allowedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
     private readonly string[] _allowedVideoTypes = { ".mp4", ".avi", ".mov", ".wmv", ".webm" };
     private readonly string[] _allowedDocumentTypes = { ".pdf", ".doc", ".docx", ".txt", ".xlsx", ".pptx" };
     private const long MaxFileSize = 50 * 1024 * 1024; // 50MB
     private const long MaxImageSize = 10 * 1024 * 1024; // 10MB for images
 
-    public FileService(JsonDataService dataService, IWebHostEnvironment environment, ILogger<FileService> logger)
+    public FileService(JsonDataService dataService, IWebHostEnvironment environment, ILogger<FileService> logger, IFileSecurityService fileSecurityService)
     {
         _dataService = dataService;
         _environment = environment;
         _logger = logger;
+        _fileSecurityService = fileSecurityService;
     }
 
     public async Task<ApiResponse<FileUploadResponseDto>> UploadFileAsync(IFormFile file, FileUploadRequestDto request)
     {
         try
         {
-            if (!await ValidateFileAsync(file))
+            // 使用增強的檔案安全驗證
+            var securityResult = await _fileSecurityService.ValidateFileSecurityAsync(file);
+            if (!securityResult.IsValid)
             {
-                return ApiResponse<FileUploadResponseDto>.ErrorResult("檔案驗證失敗");
+                var errors = securityResult.Errors.Any() ? securityResult.Errors : new List<string> { "檔案安全驗證失敗" };
+                return ApiResponse<FileUploadResponseDto>.ErrorResult("檔案安全驗證失敗", errors);
             }
 
             var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();

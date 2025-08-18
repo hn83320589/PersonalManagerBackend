@@ -1,0 +1,166 @@
+# Personal Manager Backend - Zeabur 部署配置
+# 針對 Zeabur 平台最佳化的 .NET 8.0 部署設定
+
+# 專案基本資訊
+name: personal-manager-backend
+description: Personal Manager Backend API - Enterprise JWT Authentication System
+
+# 服務配置
+services:
+  backend:
+    # 容器配置
+    dockerfile: Dockerfile
+    
+    # 環境變數
+    environment:
+      # ASP.NET Core 設定
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DOTNET_RUNNING_IN_CONTAINER: true
+      
+      # 時區設定
+      TZ: Asia/Taipei
+      
+      # JWT 認證設定
+      JwtSettings__SecretKey: ${JWT_SECRET_KEY}
+      JwtSettings__Issuer: PersonalManagerAPI
+      JwtSettings__Audience: PersonalManagerClient
+      JwtSettings__ExpiryMinutes: 60
+      JwtSettings__RefreshTokenExpiryDays: 7
+      
+      # 外部資料庫連接 (Zeabur DB Server)
+      ConnectionStrings__DefaultConnection: ${DATABASE_CONNECTION_STRING}
+    
+    # 暴露連接埠
+    ports:
+      - 8080
+    
+    # 健康檢查
+    healthcheck:
+      http:
+        path: /health
+        port: 8080
+      initial_delay: 30s
+      period: 30s
+      timeout: 10s
+      retries: 3
+    
+    # 資源配置
+    resources:
+      memory: 512MB
+      cpu: 0.5
+    
+    # 自動擴展
+    scaling:
+      min_replicas: 1
+      max_replicas: 3
+      target_cpu: 70
+      target_memory: 80
+    
+    # 檔案上傳配置
+    volumes:
+      - name: uploads
+        mount_path: /app/uploads
+        size: 1GB
+      - name: quarantine
+        mount_path: /app/quarantine
+        size: 512MB
+    
+    # 網路配置
+    networking:
+      # 允許的來源 (CORS)
+      cors:
+        - ${FRONTEND_URL}
+        - https://*.zeabur.app
+        - http://localhost:5173
+        - http://localhost:3000
+
+# 環境變數定義
+variables:
+  # 必須設定的環境變數
+  JWT_SECRET_KEY:
+    description: "JWT 簽名密鑰 (最少32字元)"
+    required: true
+    secret: true
+  
+  # 資料庫連接設定
+  DATABASE_CONNECTION_STRING:
+    description: "Zeabur DB Server 連接字串 (MariaDB/MySQL)"
+    required: true
+    secret: true
+  
+  FRONTEND_URL:
+    description: "前端應用程式URL"
+    default: "https://personalmanager-frontend.zeabur.app"
+    required: false
+
+# 部署配置
+deployment:
+  # 建置設定
+  build:
+    # 建置快取
+    cache: true
+    
+    # 建置階段資源
+    resources:
+      memory: 1GB
+      cpu: 1.0
+    
+    # 建置超時時間
+    timeout: 900s
+  
+  # 部署策略
+  strategy:
+    type: rolling_update
+    max_unavailable: 0
+    max_surge: 1
+  
+  # 啟動探針
+  readiness_probe:
+    http:
+      path: /health
+      port: 8080
+    initial_delay: 20s
+    period: 10s
+    timeout: 5s
+    failure_threshold: 3
+  
+  # 存活探針
+  liveness_probe:
+    http:
+      path: /health
+      port: 8080
+    initial_delay: 60s
+    period: 30s
+    timeout: 10s
+    failure_threshold: 3
+
+# 監控配置
+monitoring:
+  # 日誌配置
+  logging:
+    level: Information
+    retention: 7d
+  
+  # 指標收集
+  metrics:
+    enabled: true
+    path: /metrics
+    port: 8080
+
+# 安全配置
+security:
+  # HTTPS 重定向
+  https_redirect: true
+  
+  # 安全標頭
+  security_headers:
+    hsts: true
+    content_type_options: true
+    frame_options: deny
+    xss_protection: true
+  
+  # Rate Limiting
+  rate_limiting:
+    requests_per_minute: 60
+    burst_size: 10

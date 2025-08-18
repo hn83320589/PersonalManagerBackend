@@ -1,0 +1,84 @@
+# Personal Manager Backend - Docker 忽略檔案
+
+# .NET Core
+bin/
+obj/
+out/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.exe
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.sln.docstates
+
+# NuGet
+packages/
+*.nupkg
+nuget.exe
+
+# 測試結果
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+# 建置輸出
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+bld/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# 文檔
+*.md
+LICENSE
+docs/
+
+# 開發工具
+.editorconfig
+*.DotSettings
+
+# 環境檔案
+.env
+.env.local
+.env.development
+.env.production
+
+# 暫存檔案
+*.tmp
+*.temp
+*.log
+
+# 上傳檔案 (開發環境)
+uploads/
+quarantine/
+wwwroot/uploads/
+
+# Node.js (如果有前端工具)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# 專案特定
+Properties/launchSettings.json

@@ -1,0 +1,59 @@
+# Personal Manager Backend - Docker Compose 配置 (僅API服務)
+version: '3.8'
+
+services:
+  # Personal Manager API 服務
+  personalmanager-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: personalmanager-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - TZ=Asia/Taipei
+      # JWT 設定
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-PersonalManager_SuperSecretKey_2025_MinimumLength32Characters_ForProduction}
+      - JwtSettings__Issuer=${JWT_ISSUER:-PersonalManagerAPI}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-PersonalManagerClient}
+      - JwtSettings__ExpiryMinutes=${JWT_EXPIRY_MINUTES:-60}
+      - JwtSettings__RefreshTokenExpiryDays=${JWT_REFRESH_EXPIRY_DAYS:-7}
+      # 外部資料庫連線設定 (Zeabur DB Server)
+      - ConnectionStrings__DefaultConnection=${DATABASE_CONNECTION_STRING}
+    volumes:
+      # JSON 資料持久化 (開發用)
+      - ../code/Data/JsonData:/app/Data/JsonData:ro
+      # 檔案上傳存儲
+      - uploads_data:/app/uploads
+      # 檔案隔離存儲
+      - quarantine_data:/app/quarantine
+      # 日誌存儲
+      - logs_data:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # 資源限制
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+# 資料卷配置
+volumes:
+  # 應用程式資料
+  uploads_data:
+    name: personalmanager_uploads
+  quarantine_data:
+    name: personalmanager_quarantine
+  logs_data:
+    name: personalmanager_logs

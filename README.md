@@ -103,7 +103,7 @@ docker-compose up personalmanager-api
 
 ```
 code/
-├── Controllers/            # API 控制器 (13個)
+├── Controllers/            # API 控制器 (15個)
 │   ├── AuthController.cs         # JWT 身份驗證 API (7個端點)
 │   ├── BaseController.cs         # 控制器基礎類別
 │   ├── UsersController.cs        # 使用者管理 API (5個端點)
@@ -221,7 +221,7 @@ dotnet ef migrations remove
 - [x] **JsonDataService**: 完整的JSON模擬資料管理
 - [x] **統一回應格式**: ApiResponse 標準化所有回應
 
-#### API Controllers (13個完成)
+#### API Controllers (15個完成)
 - [x] **AuthController**: JWT 認證 API - 7個端點 (登入/註冊/Token管理)
 - [x] **UsersController**: 使用者管理 API - 5個端點
 - [x] **PersonalProfilesController**: 個人資料 API - 6個端點
@@ -236,6 +236,7 @@ dotnet ef migrations remove
 - [x] **GuestBookEntriesController**: 留言板 API - 4個端點
 - [x] **ContactMethodsController**: 聯絡資訊 API - 3個端點
 - [x] **FilesController**: 檔案上傳 API - 3個端點
+- [x] **BaseController**: 控制器基礎類別 (統一錯誤處理與回應格式)
 
 #### 品質保證與部署
 - [x] **API 文檔系統**: Swagger + 完整技術文檔 + Postman Collection
@@ -254,7 +255,7 @@ dotnet ef migrations remove
 
 ## 📋 API 端點統計
 
-### 總API端點: 65+ 個 (已完成)
+### 總API端點: 80+ 個 (已完成)
 ```
 使用者與認證:
 ├── Users API (5個端點): CRUD操作、使用者檢查

@@ -115,7 +115,7 @@ PersonalManagerBackend/
 - [x] 建立JSON模擬資料檔案 (替代種子資料)
 
 ### API開發
-- [ ] 建立 AuthController (身份驗證)
+- [x] 建立 AuthController (身份驗證) - 完整JWT認證系統，7個端點
 - [x] 建立 UsersController (使用者管理) - 完整CRUD操作
 - [x] 建立 PersonalProfilesController (個人資料) - 支援公開/私人、使用者查詢
 - [x] 建立 EducationsController (學歷) - 支援排序、公開篩選
@@ -128,11 +128,17 @@ PersonalManagerBackend/
 - [x] 建立 BlogPostsController (文章/網誌) - 支援發佈狀態、搜尋、分頁功能
 - [x] 建立 GuestBookEntriesController (留言) - 支援回覆功能、分頁、關鍵字搜尋
 - [x] 建立 ContactMethodsController (聯絡資訊) - 支援類型分類、社群媒體整合
+- [x] 建立 FilesController (檔案上傳) - 支援檔案安全驗證、檔案隔離系統
 - [x] 建立 ApiResponse 統一回應格式
 - [x] 設定 JsonDataService 依賴注入
 - [x] API 基礎測試驗證
 
 ### 服務層開發
+- [x] 建立 IAuthService 與實作 - JWT認證服務，完整使用者認證與授權
+- [x] 建立 IFileService 與實作 - 檔案上傳管理服務
+- [x] 建立 IFileSecurityService 與實作 - 檔案安全驗證服務
+- [x] 建立 IFileQuarantineService 與實作 - 檔案隔離系統服務
+- [x] 建立 JsonDataService - 通用JSON資料存取服務
 - [ ] 建立 IUserService 與實作
 - [ ] 建立 IProfileService 與實作
 - [ ] 建立 IExperienceService 與實作
@@ -146,6 +152,9 @@ PersonalManagerBackend/
 - [ ] 建立 IContactService 與實作
 
 ### DTOs開發
+- [x] 認證相關 DTOs (LoginDto, RegisterDto, TokenResponseDto, UserInfoDto, RefreshTokenDto)
+- [x] 檔案上傳相關 DTOs (FileUploadDto, FileUploadRequestDto)
+- [x] 統一回應格式 (ApiResponse<T>)
 - [ ] User相關 DTOs (UserDto, CreateUserDto, UpdateUserDto)
 - [ ] Profile相關 DTOs
 - [ ] Experience相關 DTOs
@@ -159,11 +168,13 @@ PersonalManagerBackend/
 - [ ] Contact相關 DTOs
 
 ### 驗證與安全性
-- [ ] 實作 JWT Token 驗證
-- [ ] 建立 Authorization 中介軟體
-- [ ] 實作資料驗證 (Data Annotations)
-- [ ] 實作錯誤處理中介軟體
-- [ ] 設定 CORS 政策
+- [x] 實作 JWT Token 驗證 - 完整JWT Bearer Authentication
+- [x] 建立 Authorization 中介軟體 - 角色權限控制
+- [x] 實作資料驗證 (Data Annotations) - Model驗證與自訂驗證
+- [x] 實作錯誤處理中介軟體 - ErrorHandlingMiddleware統一例外處理
+- [x] 設定 CORS 政策 - 完整跨域請求支援
+- [x] 檔案安全驗證系統 - 多層檔案安全檢查與惡意檔案隔離
+- [x] 請求日誌記錄系統 - RequestLoggingMiddleware完整追蹤
 
 ### 測試開發
 - [x] 設定單元測試專案 - 建立基礎測試框架
@@ -173,10 +184,12 @@ PersonalManagerBackend/
 - [x] 設定測試資料庫 - 使用 JSON 檔案模擬資料
 
 ### 部署準備
-- [ ] 設定 Docker 容器化
-- [ ] 準備 Production 環境設定
-- [ ] 建立 CI/CD 管線設定
+- [x] 設定 Docker 容器化 - 完整Docker配置與Zeabur部署支援
+- [x] 準備 Production 環境設定 - 環境變數、外部DB整合
+- [x] 建立分離配置架構 - Docker配置與原始碼分離管理
+- [x] Zeabur平台整合 - zeabur.yml配置與自動部署
 - [x] 撰寫 API 文件 - 完成詳細API文檔、快速參考手冊、Postman Collection
+- [ ] 建立 CI/CD 管線設定
 
 ## 常用指令
 

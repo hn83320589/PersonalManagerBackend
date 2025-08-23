@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalManagerAPI.DTOs;
-using PersonalManagerAPI.Models;
-using PersonalManagerAPI.Services;
+using PersonalManagerAPI.DTOs.Portfolio;
+using PersonalManagerAPI.Services.Interfaces;
 
 namespace PersonalManagerAPI.Controllers;
 
@@ -9,192 +9,200 @@ namespace PersonalManagerAPI.Controllers;
 [Route("api/[controller]")]
 public class PortfoliosController : BaseController
 {
-    private readonly JsonDataService _dataService;
+    private readonly IPortfolioService _portfolioService;
 
-    public PortfoliosController(JsonDataService dataService)
+    public PortfoliosController(IPortfolioService portfolioService)
     {
-        _dataService = dataService;
+        _portfolioService = portfolioService;
     }
 
-    /// <summary>
-    /// 取得所有公開作品集
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetPortfolios()
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> GetPortfolios([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
-        try
-        {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            var publicPortfolios = portfolios
-                .Where(p => p.IsPublic)
-                .OrderByDescending(p => p.StartDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<Portfolio>>.SuccessResult(publicPortfolios, "成功取得作品集列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<Portfolio>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var portfolios = await _portfolioService.GetAllPortfoliosAsync(skip, take);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, "成功取得作品集列表"));
     }
 
-    /// <summary>
-    /// 取得指定作品集
-    /// </summary>
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetPortfolio(int id)
+    public async Task<ActionResult<ApiResponse<PortfolioResponseDto>>> GetPortfolio(int id)
     {
-        try
+        var portfolio = await _portfolioService.GetPortfolioByIdAsync(id);
+        
+        if (portfolio == null)
         {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            var portfolio = portfolios.FirstOrDefault(p => p.Id == id);
-            
-            if (portfolio == null)
-            {
-                return NotFound(ApiResponse<Portfolio>.ErrorResult("找不到指定的作品集"));
-            }
+            return NotFound(ApiResponse<PortfolioResponseDto>.ErrorResult("找不到指定的作品集"));
+        }
 
-            return Ok(ApiResponse<Portfolio>.SuccessResult(portfolio, "成功取得作品集資料"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<Portfolio>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        return Ok(ApiResponse<PortfolioResponseDto>.SuccessResult(portfolio, "成功取得作品集資料"));
     }
 
-    /// <summary>
-    /// 取得指定使用者的作品集
-    /// </summary>
     [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetPortfoliosByUser(int userId)
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> GetPortfoliosByUserId(int userId)
     {
-        try
-        {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            var userPortfolios = portfolios
-                .Where(p => p.UserId == userId)
-                .OrderByDescending(p => p.StartDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<Portfolio>>.SuccessResult(userPortfolios, "成功取得使用者作品集列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<Portfolio>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var portfolios = await _portfolioService.GetPortfoliosByUserIdAsync(userId);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, "成功取得使用者作品集列表"));
     }
 
-    /// <summary>
-    /// 依技術類型篩選作品集
-    /// </summary>
-    [HttpGet("technology/{tech}")]
-    public async Task<IActionResult> GetPortfoliosByTechnology(string tech)
+    [HttpGet("public")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> GetPublicPortfolios([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
-        try
-        {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            var filteredPortfolios = portfolios
-                .Where(p => p.IsPublic && 
-                       (!string.IsNullOrEmpty(p.Technologies) && 
-                        p.Technologies.Contains(tech, StringComparison.OrdinalIgnoreCase)))
-                .OrderByDescending(p => p.StartDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<Portfolio>>.SuccessResult(filteredPortfolios, $"成功取得 {tech} 相關作品集"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<Portfolio>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var portfolios = await _portfolioService.GetPublicPortfoliosAsync(skip, take);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, "成功取得公開作品集列表"));
     }
 
-    /// <summary>
-    /// 建立作品集
-    /// </summary>
+    [HttpGet("featured")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> GetFeaturedPortfolios([FromQuery] bool publicOnly = true)
+    {
+        var portfolios = await _portfolioService.GetFeaturedPortfoliosAsync(publicOnly);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, "成功取得特色作品集"));
+    }
+
+    [HttpGet("technology/{technology}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> SearchByTechnology(string technology, [FromQuery] bool publicOnly = true)
+    {
+        if (string.IsNullOrWhiteSpace(technology))
+        {
+            return BadRequest(ApiResponse<IEnumerable<PortfolioResponseDto>>.ErrorResult("技術名稱不能為空"));
+        }
+
+        var portfolios = await _portfolioService.SearchByTechnologyAsync(technology, publicOnly);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, $"成功取得 {technology} 相關作品集"));
+    }
+
+    [HttpGet("type/{type}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> SearchByType(string type, [FromQuery] bool publicOnly = true)
+    {
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return BadRequest(ApiResponse<IEnumerable<PortfolioResponseDto>>.ErrorResult("作品類型不能為空"));
+        }
+
+        var portfolios = await _portfolioService.SearchByTypeAsync(type, publicOnly);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, $"成功取得 {type} 類型作品集"));
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> SearchPortfolios([FromQuery] string keyword, [FromQuery] bool publicOnly = true)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return BadRequest(ApiResponse<IEnumerable<PortfolioResponseDto>>.ErrorResult("搜尋關鍵字不能為空"));
+        }
+
+        var portfolios = await _portfolioService.SearchPortfoliosAsync(keyword, publicOnly);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, "搜尋完成"));
+    }
+
+    [HttpGet("date-range")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<PortfolioResponseDto>>>> GetPortfoliosByDateRange(
+        [FromQuery] DateTime? startDate, 
+        [FromQuery] DateTime? endDate, 
+        [FromQuery] bool publicOnly = true)
+    {
+        var portfolios = await _portfolioService.GetPortfoliosByDateRangeAsync(startDate, endDate, publicOnly);
+        return Ok(ApiResponse<IEnumerable<PortfolioResponseDto>>.SuccessResult(portfolios, "成功取得指定時期的作品集"));
+    }
+
+    [HttpGet("technologies")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<string>>>> GetTechnologies([FromQuery] bool publicOnly = true)
+    {
+        var technologies = await _portfolioService.GetTechnologiesAsync(publicOnly);
+        return Ok(ApiResponse<IEnumerable<string>>.SuccessResult(technologies, "成功取得技術列表"));
+    }
+
+    [HttpGet("types")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<string>>>> GetPortfolioTypes([FromQuery] bool publicOnly = true)
+    {
+        var types = await _portfolioService.GetPortfolioTypesAsync(publicOnly);
+        return Ok(ApiResponse<IEnumerable<string>>.SuccessResult(types, "成功取得作品類型列表"));
+    }
+
     [HttpPost]
-    public async Task<IActionResult> CreatePortfolio([FromBody] Portfolio portfolio)
+    public async Task<ActionResult<ApiResponse<PortfolioResponseDto>>> CreatePortfolio([FromBody] CreatePortfolioDto createPortfolioDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            
-            portfolio.Id = portfolios.Count > 0 ? portfolios.Max(p => p.Id) + 1 : 1;
-            portfolio.CreatedAt = DateTime.UtcNow;
-            portfolio.UpdatedAt = DateTime.UtcNow;
-            
-            portfolios.Add(portfolio);
-            await _dataService.SavePortfoliosAsync(portfolios);
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<PortfolioResponseDto>.ErrorResult("資料驗證失敗", errors));
+        }
 
-            return Ok(ApiResponse<Portfolio>.SuccessResult(portfolio, "作品集建立成功"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<Portfolio>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var portfolio = await _portfolioService.CreatePortfolioAsync(createPortfolioDto);
+
+        return CreatedAtAction(nameof(GetPortfolio), new { id = portfolio.Id }, 
+            ApiResponse<PortfolioResponseDto>.SuccessResult(portfolio, "作品集建立成功"));
     }
 
-    /// <summary>
-    /// 更新作品集
-    /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdatePortfolio(int id, [FromBody] Portfolio updatedPortfolio)
+    public async Task<ActionResult<ApiResponse<PortfolioResponseDto>>> UpdatePortfolio(int id, [FromBody] UpdatePortfolioDto updatePortfolioDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            var portfolio = portfolios.FirstOrDefault(p => p.Id == id);
-            
-            if (portfolio == null)
-            {
-                return NotFound(ApiResponse<Portfolio>.ErrorResult("找不到指定的作品集"));
-            }
-
-            portfolio.Title = updatedPortfolio.Title;
-            portfolio.Description = updatedPortfolio.Description;
-            portfolio.ProjectUrl = updatedPortfolio.ProjectUrl;
-            portfolio.RepositoryUrl = updatedPortfolio.RepositoryUrl;
-            portfolio.ImageUrl = updatedPortfolio.ImageUrl;
-            portfolio.Technologies = updatedPortfolio.Technologies;
-            portfolio.StartDate = updatedPortfolio.StartDate;
-            portfolio.EndDate = updatedPortfolio.EndDate;
-            portfolio.IsPublic = updatedPortfolio.IsPublic;
-            portfolio.SortOrder = updatedPortfolio.SortOrder;
-            portfolio.UpdatedAt = DateTime.UtcNow;
-
-            await _dataService.SavePortfoliosAsync(portfolios);
-
-            return Ok(ApiResponse<Portfolio>.SuccessResult(portfolio, "作品集更新成功"));
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<PortfolioResponseDto>.ErrorResult("資料驗證失敗", errors));
         }
-        catch (Exception ex)
+
+        var portfolio = await _portfolioService.UpdatePortfolioAsync(id, updatePortfolioDto);
+        
+        if (portfolio == null)
         {
-            return StatusCode(500, ApiResponse<Portfolio>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return NotFound(ApiResponse<PortfolioResponseDto>.ErrorResult("找不到指定的作品集"));
         }
+
+        return Ok(ApiResponse<PortfolioResponseDto>.SuccessResult(portfolio, "作品集更新成功"));
     }
 
-    /// <summary>
-    /// 刪除作品集
-    /// </summary>
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeletePortfolio(int id)
+    public async Task<ActionResult<ApiResponse>> DeletePortfolio(int id)
     {
-        try
+        var result = await _portfolioService.DeletePortfolioAsync(id);
+        
+        if (!result)
         {
-            var portfolios = await _dataService.GetPortfoliosAsync();
-            var portfolio = portfolios.FirstOrDefault(p => p.Id == id);
-            
-            if (portfolio == null)
-            {
-                return NotFound(ApiResponse.ErrorResult("找不到指定的作品集"));
-            }
-
-            portfolios.Remove(portfolio);
-            await _dataService.SavePortfoliosAsync(portfolios);
-
-            return Ok(ApiResponse.SuccessResult("作品集刪除成功"));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的作品集"));
         }
-        catch (Exception ex)
+
+        return Ok(ApiResponse.SuccessResult("作品集刪除成功"));
+    }
+
+    [HttpPut("{id}/order")]
+    public async Task<ActionResult<ApiResponse>> UpdatePortfolioOrder(int id, [FromBody] int newSortOrder)
+    {
+        var result = await _portfolioService.UpdatePortfolioOrderAsync(id, newSortOrder);
+        
+        if (!result)
         {
-            return StatusCode(500, ApiResponse.ErrorResult("伺服器錯誤: " + ex.Message));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的作品集"));
         }
+
+        return Ok(ApiResponse.SuccessResult("作品集排序更新成功"));
+    }
+
+    [HttpPut("batch-order")]
+    public async Task<ActionResult<ApiResponse>> BatchUpdatePortfolioOrder([FromBody] Dictionary<int, int> portfolioOrders)
+    {
+        if (portfolioOrders == null || !portfolioOrders.Any())
+        {
+            return BadRequest(ApiResponse.ErrorResult("排序資料不能為空"));
+        }
+
+        var result = await _portfolioService.BatchUpdatePortfolioOrderAsync(portfolioOrders);
+        
+        if (!result)
+        {
+            return BadRequest(ApiResponse.ErrorResult("批量更新排序失敗"));
+        }
+
+        return Ok(ApiResponse.SuccessResult("批量更新作品集排序成功"));
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<ApiResponse<object>>> GetPortfolioStats()
+    {
+        var stats = await _portfolioService.GetPortfolioStatsAsync();
+        return Ok(ApiResponse<object>.SuccessResult(stats, "成功取得作品集統計"));
     }
 }

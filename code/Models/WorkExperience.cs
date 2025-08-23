@@ -10,20 +10,32 @@ public class WorkExperience
     public int UserId { get; set; }
     
     [Required]
-    [StringLength(100)]
+    [StringLength(200)]
     public string Company { get; set; } = string.Empty;
     
     [Required]
     [StringLength(100)]
     public string Position { get; set; } = string.Empty;
     
-    public DateTime? StartDate { get; set; }
+    public string? Description { get; set; }
+    
+    [StringLength(100)]
+    public string? Department { get; set; }
+    
+    [StringLength(100)]
+    public string? Location { get; set; }
+    
+    [Required]
+    public DateTime StartDate { get; set; }
     
     public DateTime? EndDate { get; set; }
     
-    public bool IsCurrent { get; set; } = false;
+    public decimal? Salary { get; set; }
     
-    public string? Description { get; set; }
+    [StringLength(20)]
+    public string? SalaryCurrency { get; set; } = "TWD";
+    
+    public bool IsCurrent { get; set; } = false;
     
     public string? Achievements { get; set; }
     

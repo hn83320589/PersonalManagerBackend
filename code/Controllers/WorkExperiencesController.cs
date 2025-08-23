@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalManagerAPI.DTOs;
-using PersonalManagerAPI.Models;
-using PersonalManagerAPI.Services;
+using PersonalManagerAPI.DTOs.WorkExperience;
+using PersonalManagerAPI.Services.Interfaces;
 
 namespace PersonalManagerAPI.Controllers;
 
@@ -9,195 +9,168 @@ namespace PersonalManagerAPI.Controllers;
 [Route("api/[controller]")]
 public class WorkExperiencesController : BaseController
 {
-    private readonly JsonDataService _dataService;
+    private readonly IWorkExperienceService _workExperienceService;
 
-    public WorkExperiencesController(JsonDataService dataService)
+    public WorkExperiencesController(IWorkExperienceService workExperienceService)
     {
-        _dataService = dataService;
+        _workExperienceService = workExperienceService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<WorkExperience>>>> GetWorkExperiences()
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> GetWorkExperiences([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
-        try
-        {
-            var workExperiences = await _dataService.GetWorkExperiencesAsync();
-            return Ok(ApiResponse<List<WorkExperience>>.SuccessResult(workExperiences, "成功取得工作經歷列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkExperience>>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+        var workExperiences = await _workExperienceService.GetAllWorkExperiencesAsync(skip, take);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "成功取得工作經歷列表"));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<WorkExperience>>> GetWorkExperience(int id)
+    public async Task<ActionResult<ApiResponse<WorkExperienceResponseDto>>> GetWorkExperience(int id)
     {
-        try
+        var workExperience = await _workExperienceService.GetWorkExperienceByIdAsync(id);
+        
+        if (workExperience == null)
         {
-            var workExperience = await _dataService.GetByIdAsync<WorkExperience>("workExperiences.json", id);
-            
-            if (workExperience == null)
-            {
-                return NotFound(ApiResponse<WorkExperience>.ErrorResult("找不到指定的工作經歷"));
-            }
+            return NotFound(ApiResponse<WorkExperienceResponseDto>.ErrorResult("找不到指定的工作經歷"));
+        }
 
-            return Ok(ApiResponse<WorkExperience>.SuccessResult(workExperience, "成功取得工作經歷"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<WorkExperience>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+        return Ok(ApiResponse<WorkExperienceResponseDto>.SuccessResult(workExperience, "成功取得工作經歷資料"));
     }
 
     [HttpGet("user/{userId}")]
-    public async Task<ActionResult<ApiResponse<List<WorkExperience>>>> GetWorkExperiencesByUserId(int userId)
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> GetWorkExperiencesByUserId(int userId)
     {
-        try
-        {
-            var workExperiences = await _dataService.GetByUserIdAsync<WorkExperience>("workExperiences.json", userId);
-            var sortedWorkExperiences = workExperiences.OrderBy(w => w.SortOrder).ToList();
-            
-            return Ok(ApiResponse<List<WorkExperience>>.SuccessResult(sortedWorkExperiences, "成功取得使用者工作經歷列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkExperience>>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+        var workExperiences = await _workExperienceService.GetWorkExperiencesByUserIdAsync(userId);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "成功取得使用者工作經歷列表"));
     }
 
-    [HttpGet("user/{userId}/public")]
-    public async Task<ActionResult<ApiResponse<List<WorkExperience>>>> GetPublicWorkExperiencesByUserId(int userId)
+    [HttpGet("public")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> GetPublicWorkExperiences([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
-        try
-        {
-            var workExperiences = await _dataService.GetByUserIdAsync<WorkExperience>("workExperiences.json", userId);
-            var publicWorkExperiences = workExperiences.Where(w => w.IsPublic)
-                                                      .OrderBy(w => w.SortOrder)
-                                                      .ToList();
-            
-            return Ok(ApiResponse<List<WorkExperience>>.SuccessResult(publicWorkExperiences, "成功取得公開工作經歷列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkExperience>>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+        var workExperiences = await _workExperienceService.GetPublicWorkExperiencesAsync(skip, take);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "成功取得公開工作經歷列表"));
     }
 
-    [HttpGet("user/{userId}/current")]
-    public async Task<ActionResult<ApiResponse<List<WorkExperience>>>> GetCurrentWorkExperiencesByUserId(int userId)
+    [HttpGet("current")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> GetCurrentWorkExperiences([FromQuery] bool publicOnly = true)
     {
-        try
+        var workExperiences = await _workExperienceService.GetCurrentWorkExperiencesAsync(publicOnly);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "成功取得目前工作經歷"));
+    }
+
+    [HttpGet("search/company")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> SearchByCompany([FromQuery] string company, [FromQuery] bool publicOnly = true)
+    {
+        if (string.IsNullOrWhiteSpace(company))
         {
-            var workExperiences = await _dataService.GetByUserIdAsync<WorkExperience>("workExperiences.json", userId);
-            var currentWorkExperiences = workExperiences.Where(w => w.IsCurrent)
-                                                       .OrderBy(w => w.SortOrder)
-                                                       .ToList();
-            
-            return Ok(ApiResponse<List<WorkExperience>>.SuccessResult(currentWorkExperiences, "成功取得目前工作經歷"));
+            return BadRequest(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.ErrorResult("公司名稱不能為空"));
         }
-        catch (Exception ex)
+
+        var workExperiences = await _workExperienceService.SearchByCompanyAsync(company, publicOnly);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "搜尋完成"));
+    }
+
+    [HttpGet("search/position")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> SearchByPosition([FromQuery] string position, [FromQuery] bool publicOnly = true)
+    {
+        if (string.IsNullOrWhiteSpace(position))
         {
-            return StatusCode(500, ApiResponse<List<WorkExperience>>.ErrorResult($"伺服器錯誤: {ex.Message}"));
+            return BadRequest(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.ErrorResult("職位名稱不能為空"));
         }
+
+        var workExperiences = await _workExperienceService.SearchByPositionAsync(position, publicOnly);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "搜尋完成"));
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> SearchWorkExperiences([FromQuery] string keyword, [FromQuery] bool publicOnly = true)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return BadRequest(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.ErrorResult("搜尋關鍵字不能為空"));
+        }
+
+        var workExperiences = await _workExperienceService.SearchWorkExperiencesAsync(keyword, publicOnly);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "搜尋完成"));
+    }
+
+    [HttpGet("date-range")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkExperienceResponseDto>>>> GetWorkExperiencesByDateRange(
+        [FromQuery] DateTime? startDate, 
+        [FromQuery] DateTime? endDate, 
+        [FromQuery] bool publicOnly = true)
+    {
+        var workExperiences = await _workExperienceService.GetWorkExperiencesByDateRangeAsync(startDate, endDate, publicOnly);
+        return Ok(ApiResponse<IEnumerable<WorkExperienceResponseDto>>.SuccessResult(workExperiences, "成功取得指定時期的工作經歷"));
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<WorkExperience>>> CreateWorkExperience([FromBody] WorkExperience workExperience)
+    public async Task<ActionResult<ApiResponse<WorkExperienceResponseDto>>> CreateWorkExperience([FromBody] CreateWorkExperienceDto createWorkExperienceDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                            .Select(e => e.ErrorMessage)
-                                            .ToList();
-                return BadRequest(ApiResponse<WorkExperience>.ErrorResult("資料驗證失敗", errors));
-            }
-
-            var workExperiences = await _dataService.GetWorkExperiencesAsync();
-            
-            // Generate new ID
-            workExperience.Id = workExperiences.Any() ? workExperiences.Max(w => w.Id) + 1 : 1;
-            workExperience.CreatedAt = DateTime.UtcNow;
-            workExperience.UpdatedAt = DateTime.UtcNow;
-            
-            workExperiences.Add(workExperience);
-            await _dataService.SaveWorkExperiencesAsync(workExperiences);
-
-            return CreatedAtAction(nameof(GetWorkExperience), new { id = workExperience.Id }, 
-                ApiResponse<WorkExperience>.SuccessResult(workExperience, "工作經歷建立成功"));
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<WorkExperienceResponseDto>.ErrorResult("資料驗證失敗", errors));
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<WorkExperience>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+
+        var workExperience = await _workExperienceService.CreateWorkExperienceAsync(createWorkExperienceDto);
+
+        return CreatedAtAction(nameof(GetWorkExperience), new { id = workExperience.Id }, 
+            ApiResponse<WorkExperienceResponseDto>.SuccessResult(workExperience, "工作經歷建立成功"));
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<WorkExperience>>> UpdateWorkExperience(int id, [FromBody] WorkExperience workExperience)
+    public async Task<ActionResult<ApiResponse<WorkExperienceResponseDto>>> UpdateWorkExperience(int id, [FromBody] UpdateWorkExperienceDto updateWorkExperienceDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                            .Select(e => e.ErrorMessage)
-                                            .ToList();
-                return BadRequest(ApiResponse<WorkExperience>.ErrorResult("資料驗證失敗", errors));
-            }
-
-            var workExperiences = await _dataService.GetWorkExperiencesAsync();
-            var existingWorkExperience = workExperiences.FirstOrDefault(w => w.Id == id);
-            
-            if (existingWorkExperience == null)
-            {
-                return NotFound(ApiResponse<WorkExperience>.ErrorResult("找不到指定的工作經歷"));
-            }
-
-            // Update work experience properties
-            existingWorkExperience.Company = workExperience.Company;
-            existingWorkExperience.Position = workExperience.Position;
-            existingWorkExperience.StartDate = workExperience.StartDate;
-            existingWorkExperience.EndDate = workExperience.EndDate;
-            existingWorkExperience.IsCurrent = workExperience.IsCurrent;
-            existingWorkExperience.Description = workExperience.Description;
-            existingWorkExperience.Achievements = workExperience.Achievements;
-            existingWorkExperience.IsPublic = workExperience.IsPublic;
-            existingWorkExperience.SortOrder = workExperience.SortOrder;
-            existingWorkExperience.UpdatedAt = DateTime.UtcNow;
-
-            await _dataService.SaveWorkExperiencesAsync(workExperiences);
-
-            return Ok(ApiResponse<WorkExperience>.SuccessResult(existingWorkExperience, "工作經歷更新成功"));
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<WorkExperienceResponseDto>.ErrorResult("資料驗證失敗", errors));
         }
-        catch (Exception ex)
+
+        var workExperience = await _workExperienceService.UpdateWorkExperienceAsync(id, updateWorkExperienceDto);
+        
+        if (workExperience == null)
         {
-            return StatusCode(500, ApiResponse<WorkExperience>.ErrorResult($"伺服器錯誤: {ex.Message}"));
+            return NotFound(ApiResponse<WorkExperienceResponseDto>.ErrorResult("找不到指定的工作經歷"));
         }
+
+        return Ok(ApiResponse<WorkExperienceResponseDto>.SuccessResult(workExperience, "工作經歷更新成功"));
     }
 
     [HttpDelete("{id}")]
     public async Task<ActionResult<ApiResponse>> DeleteWorkExperience(int id)
     {
-        try
+        var result = await _workExperienceService.DeleteWorkExperienceAsync(id);
+        
+        if (!result)
         {
-            var workExperiences = await _dataService.GetWorkExperiencesAsync();
-            var workExperience = workExperiences.FirstOrDefault(w => w.Id == id);
-            
-            if (workExperience == null)
-            {
-                return NotFound(ApiResponse.ErrorResult("找不到指定的工作經歷"));
-            }
-
-            workExperiences.Remove(workExperience);
-            await _dataService.SaveWorkExperiencesAsync(workExperiences);
-
-            return Ok(ApiResponse.SuccessResult("工作經歷刪除成功"));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的工作經歷"));
         }
-        catch (Exception ex)
+
+        return Ok(ApiResponse.SuccessResult("工作經歷刪除成功"));
+    }
+
+    [HttpPut("{id}/order")]
+    public async Task<ActionResult<ApiResponse>> UpdateWorkExperienceOrder(int id, [FromBody] int newSortOrder)
+    {
+        var result = await _workExperienceService.UpdateWorkExperienceOrderAsync(id, newSortOrder);
+        
+        if (!result)
         {
-            return StatusCode(500, ApiResponse.ErrorResult($"伺服器錯誤: {ex.Message}"));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的工作經歷"));
         }
+
+        return Ok(ApiResponse.SuccessResult("工作經歷排序更新成功"));
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<ApiResponse<object>>> GetWorkExperienceStats()
+    {
+        var stats = await _workExperienceService.GetWorkExperienceStatsAsync();
+        return Ok(ApiResponse<object>.SuccessResult(stats, "成功取得工作經歷統計"));
     }
 }

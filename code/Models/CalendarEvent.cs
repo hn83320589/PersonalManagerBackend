@@ -2,15 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PersonalManagerAPI.Models;
 
-public enum EventType
-{
-    Personal,
-    Work,
-    Meeting,
-    Reminder,
-    Other
-}
-
 public class CalendarEvent
 {
     public int Id { get; set; }
@@ -25,14 +16,10 @@ public class CalendarEvent
     public string? Description { get; set; }
     
     [Required]
-    public DateTime StartDate { get; set; }
-    
-    [Required]
     public DateTime StartTime { get; set; }
     
-    public DateTime? EndDate { get; set; }
-    
-    public DateTime? EndTime { get; set; }
+    [Required]
+    public DateTime EndTime { get; set; }
     
     [StringLength(20)]
     public string? Color { get; set; }
@@ -44,7 +31,20 @@ public class CalendarEvent
     
     public bool IsPublic { get; set; } = false;
     
-    public EventType EventType { get; set; } = EventType.Personal;
+    [StringLength(50)]
+    public string? Type { get; set; }
+    
+    public bool IsRecurring { get; set; } = false;
+    
+    [StringLength(100)]
+    public string? RecurrencePattern { get; set; }
+    
+    public bool HasReminder { get; set; } = false;
+    
+    public int? ReminderMinutes { get; set; }
+    
+    [StringLength(500)]
+    public string? ExternalUrl { get; set; }
     
     [StringLength(255)]
     public string? GoogleEventId { get; set; }

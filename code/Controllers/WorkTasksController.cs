@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalManagerAPI.DTOs;
-using PersonalManagerAPI.Models;
-using PersonalManagerAPI.Services;
+using PersonalManagerAPI.DTOs.WorkTask;
+using PersonalManagerAPI.Services.Interfaces;
 
 namespace PersonalManagerAPI.Controllers;
 
@@ -9,267 +9,273 @@ namespace PersonalManagerAPI.Controllers;
 [Route("api/[controller]")]
 public class WorkTasksController : BaseController
 {
-    private readonly JsonDataService _dataService;
+    private readonly IWorkTaskService _workTaskService;
 
-    public WorkTasksController(JsonDataService dataService)
+    public WorkTasksController(IWorkTaskService workTaskService)
     {
-        _dataService = dataService;
+        _workTaskService = workTaskService;
     }
 
-    /// <summary>
-    /// 取得所有工作追蹤項目
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetWorkTasks([FromQuery] Models.TaskStatus? status = null, [FromQuery] TaskPriority? priority = null)
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetWorkTasks([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
-        try
-        {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var query = workTasks.AsQueryable();
-
-            if (status.HasValue)
-            {
-                query = query.Where(t => t.Status == status.Value);
-            }
-
-            if (priority.HasValue)
-            {
-                query = query.Where(t => t.Priority == priority.Value);
-            }
-
-            var filteredTasks = query
-                .OrderByDescending(t => t.Priority)
-                .ThenBy(t => t.DueDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<WorkTask>>.SuccessResult(filteredTasks, "成功取得工作追蹤列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkTask>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var workTasks = await _workTaskService.GetAllWorkTasksAsync(skip, take);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "成功取得工作任務列表"));
     }
 
-    /// <summary>
-    /// 取得指定工作追蹤項目
-    /// </summary>
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetWorkTask(int id)
+    public async Task<ActionResult<ApiResponse<WorkTaskResponseDto>>> GetWorkTask(int id)
     {
-        try
+        var workTask = await _workTaskService.GetWorkTaskByIdAsync(id);
+        
+        if (workTask == null)
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var workTask = workTasks.FirstOrDefault(t => t.Id == id);
-            
-            if (workTask == null)
-            {
-                return NotFound(ApiResponse<WorkTask>.ErrorResult("找不到指定的工作追蹤項目"));
-            }
+            return NotFound(ApiResponse<WorkTaskResponseDto>.ErrorResult("找不到指定的工作任務"));
+        }
 
-            return Ok(ApiResponse<WorkTask>.SuccessResult(workTask, "成功取得工作追蹤資料"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<WorkTask>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        return Ok(ApiResponse<WorkTaskResponseDto>.SuccessResult(workTask, "成功取得工作任務資料"));
     }
 
-    /// <summary>
-    /// 取得指定使用者的工作追蹤項目
-    /// </summary>
     [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetWorkTasksByUser(int userId, [FromQuery] Models.TaskStatus? status = null)
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetWorkTasksByUserId(int userId)
     {
-        try
-        {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var query = workTasks.Where(t => t.UserId == userId);
-
-            if (status.HasValue)
-            {
-                query = query.Where(t => t.Status == status.Value);
-            }
-
-            var userWorkTasks = query
-                .OrderByDescending(t => t.Priority)
-                .ThenBy(t => t.DueDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<WorkTask>>.SuccessResult(userWorkTasks, "成功取得使用者工作追蹤列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkTask>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var workTasks = await _workTaskService.GetWorkTasksByUserIdAsync(userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "成功取得使用者工作任務列表"));
     }
 
-    /// <summary>
-    /// 取得專案相關的工作追蹤項目
-    /// </summary>
-    [HttpGet("project/{projectId}")]
-    public async Task<IActionResult> GetWorkTasksByProject(string projectId)
+    [HttpGet("status/{status}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetWorkTasksByStatus(string status, [FromQuery] int userId)
     {
-        try
+        if (string.IsNullOrWhiteSpace(status))
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var projectTasks = workTasks
-                .Where(t => !string.IsNullOrEmpty(t.ProjectId) && 
-                           t.ProjectId.Equals(projectId, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(t => t.Priority)
-                .ThenBy(t => t.DueDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<WorkTask>>.SuccessResult(projectTasks, "成功取得專案工作追蹤列表"));
+            return BadRequest(ApiResponse<IEnumerable<WorkTaskResponseDto>>.ErrorResult("狀態不能為空"));
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkTask>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+
+        var workTasks = await _workTaskService.GetWorkTasksByStatusAsync(status, userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, $"成功取得{status}狀態的工作任務"));
     }
 
-    /// <summary>
-    /// 取得進行中的工作追蹤項目
-    /// </summary>
-    [HttpGet("in-progress")]
-    public async Task<IActionResult> GetInProgressTasks()
+    [HttpGet("priority/{priority}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetWorkTasksByPriority(string priority, [FromQuery] int userId)
     {
-        try
+        if (string.IsNullOrWhiteSpace(priority))
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var inProgressTasks = workTasks
-                .Where(t => t.Status == Models.TaskStatus.InProgress)
-                .OrderByDescending(t => t.Priority)
-                .ThenBy(t => t.DueDate)
-                .ToList();
-                
-            return Ok(ApiResponse<List<WorkTask>>.SuccessResult(inProgressTasks, "成功取得進行中工作追蹤"));
+            return BadRequest(ApiResponse<IEnumerable<WorkTaskResponseDto>>.ErrorResult("優先級不能為空"));
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<WorkTask>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+
+        var workTasks = await _workTaskService.GetWorkTasksByPriorityAsync(priority, userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, $"成功取得{priority}優先級的工作任務"));
     }
 
-    /// <summary>
-    /// 建立工作追蹤項目
-    /// </summary>
+    [HttpGet("project/{project}")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetWorkTasksByProject(string project, [FromQuery] int userId)
+    {
+        if (string.IsNullOrWhiteSpace(project))
+        {
+            return BadRequest(ApiResponse<IEnumerable<WorkTaskResponseDto>>.ErrorResult("專案名稱不能為空"));
+        }
+
+        var workTasks = await _workTaskService.GetWorkTasksByProjectAsync(project, userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, $"成功取得{project}專案的工作任務"));
+    }
+
+    [HttpGet("overdue")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetOverdueWorkTasks([FromQuery] int userId)
+    {
+        var workTasks = await _workTaskService.GetOverdueWorkTasksAsync(userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "成功取得逾期工作任務"));
+    }
+
+    [HttpGet("active")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetActiveWorkTasks([FromQuery] int userId)
+    {
+        var workTasks = await _workTaskService.GetActiveWorkTasksAsync(userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "成功取得進行中的工作任務"));
+    }
+
+    [HttpGet("completed")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetCompletedWorkTasks([FromQuery] int userId)
+    {
+        var workTasks = await _workTaskService.GetCompletedWorkTasksAsync(userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "成功取得已完成的工作任務"));
+    }
+
+    [HttpGet("date-range")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> GetWorkTasksByDateRange(
+        [FromQuery] DateTime startDate, 
+        [FromQuery] DateTime endDate, 
+        [FromQuery] int userId)
+    {
+        var workTasks = await _workTaskService.GetWorkTasksByDateRangeAsync(startDate, endDate, userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "成功取得指定日期範圍的工作任務"));
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> SearchWorkTasks([FromQuery] string keyword, [FromQuery] int userId)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return BadRequest(ApiResponse<IEnumerable<WorkTaskResponseDto>>.ErrorResult("搜尋關鍵字不能為空"));
+        }
+
+        var workTasks = await _workTaskService.SearchWorkTasksAsync(keyword, userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "搜尋完成"));
+    }
+
+    [HttpGet("search/tags")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<WorkTaskResponseDto>>>> SearchWorkTasksByTags([FromQuery] string tags, [FromQuery] int userId)
+    {
+        if (string.IsNullOrWhiteSpace(tags))
+        {
+            return BadRequest(ApiResponse<IEnumerable<WorkTaskResponseDto>>.ErrorResult("標籤不能為空"));
+        }
+
+        var workTasks = await _workTaskService.SearchWorkTasksByTagsAsync(tags, userId);
+        return Ok(ApiResponse<IEnumerable<WorkTaskResponseDto>>.SuccessResult(workTasks, "標籤搜尋完成"));
+    }
+
+    [HttpGet("projects")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<string>>>> GetProjects([FromQuery] int userId)
+    {
+        var projects = await _workTaskService.GetProjectsAsync(userId);
+        return Ok(ApiResponse<IEnumerable<string>>.SuccessResult(projects, "成功取得專案列表"));
+    }
+
+    [HttpGet("tags")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<string>>>> GetTags([FromQuery] int userId)
+    {
+        var tags = await _workTaskService.GetTagsAsync(userId);
+        return Ok(ApiResponse<IEnumerable<string>>.SuccessResult(tags, "成功取得標籤列表"));
+    }
+
     [HttpPost]
-    public async Task<IActionResult> CreateWorkTask([FromBody] WorkTask workTask)
+    public async Task<ActionResult<ApiResponse<WorkTaskResponseDto>>> CreateWorkTask([FromBody] CreateWorkTaskDto createWorkTaskDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            
-            workTask.Id = workTasks.Count > 0 ? workTasks.Max(t => t.Id) + 1 : 1;
-            workTask.Status = Models.TaskStatus.Pending;
-            workTask.CreatedAt = DateTime.UtcNow;
-            workTask.UpdatedAt = DateTime.UtcNow;
-            
-            workTasks.Add(workTask);
-            await _dataService.SaveWorkTasksAsync(workTasks);
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<WorkTaskResponseDto>.ErrorResult("資料驗證失敗", errors));
+        }
 
-            return Ok(ApiResponse<WorkTask>.SuccessResult(workTask, "工作追蹤項目建立成功"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<WorkTask>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+        var workTask = await _workTaskService.CreateWorkTaskAsync(createWorkTaskDto);
+
+        return CreatedAtAction(nameof(GetWorkTask), new { id = workTask.Id }, 
+            ApiResponse<WorkTaskResponseDto>.SuccessResult(workTask, "工作任務建立成功"));
     }
 
-    /// <summary>
-    /// 更新工作追蹤項目
-    /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateWorkTask(int id, [FromBody] WorkTask updatedTask)
+    public async Task<ActionResult<ApiResponse<WorkTaskResponseDto>>> UpdateWorkTask(int id, [FromBody] UpdateWorkTaskDto updateWorkTaskDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var workTask = workTasks.FirstOrDefault(t => t.Id == id);
-            
-            if (workTask == null)
-            {
-                return NotFound(ApiResponse<WorkTask>.ErrorResult("找不到指定的工作追蹤項目"));
-            }
-
-            workTask.Title = updatedTask.Title;
-            workTask.Description = updatedTask.Description;
-            workTask.Priority = updatedTask.Priority;
-            workTask.Status = updatedTask.Status;
-            workTask.DueDate = updatedTask.DueDate;
-            workTask.ProjectId = updatedTask.ProjectId;
-            workTask.EstimatedHours = updatedTask.EstimatedHours;
-            workTask.ActualHours = updatedTask.ActualHours;
-            workTask.UpdatedAt = DateTime.UtcNow;
-
-            if (updatedTask.Status == Models.TaskStatus.Completed && workTask.CompletedAt == null)
-            {
-                workTask.CompletedAt = DateTime.UtcNow;
-            }
-
-            await _dataService.SaveWorkTasksAsync(workTasks);
-
-            return Ok(ApiResponse<WorkTask>.SuccessResult(workTask, "工作追蹤項目更新成功"));
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<WorkTaskResponseDto>.ErrorResult("資料驗證失敗", errors));
         }
-        catch (Exception ex)
+
+        var workTask = await _workTaskService.UpdateWorkTaskAsync(id, updateWorkTaskDto);
+        
+        if (workTask == null)
         {
-            return StatusCode(500, ApiResponse<WorkTask>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return NotFound(ApiResponse<WorkTaskResponseDto>.ErrorResult("找不到指定的工作任務"));
         }
+
+        return Ok(ApiResponse<WorkTaskResponseDto>.SuccessResult(workTask, "工作任務更新成功"));
     }
 
-    /// <summary>
-    /// 記錄工作時間
-    /// </summary>
-    [HttpPut("{id}/time")]
-    public async Task<IActionResult> UpdateWorkTime(int id, [FromBody] decimal actualHours)
+    [HttpPatch("{id}/start")]
+    public async Task<ActionResult<ApiResponse>> StartWorkTask(int id)
     {
-        try
+        var result = await _workTaskService.StartWorkTaskAsync(id);
+        
+        if (!result)
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var workTask = workTasks.FirstOrDefault(t => t.Id == id);
-            
-            if (workTask == null)
-            {
-                return NotFound(ApiResponse<WorkTask>.ErrorResult("找不到指定的工作追蹤項目"));
-            }
-
-            workTask.ActualHours = actualHours;
-            workTask.UpdatedAt = DateTime.UtcNow;
-
-            await _dataService.SaveWorkTasksAsync(workTasks);
-
-            return Ok(ApiResponse<WorkTask>.SuccessResult(workTask, "工作時間記錄更新成功"));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的工作任務"));
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<WorkTask>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+
+        return Ok(ApiResponse.SuccessResult("工作任務已開始"));
     }
 
-    /// <summary>
-    /// 刪除工作追蹤項目
-    /// </summary>
+    [HttpPatch("{id}/pause")]
+    public async Task<ActionResult<ApiResponse>> PauseWorkTask(int id)
+    {
+        var result = await _workTaskService.PauseWorkTaskAsync(id);
+        
+        if (!result)
+        {
+            return NotFound(ApiResponse.ErrorResult("找不到指定的工作任務"));
+        }
+
+        return Ok(ApiResponse.SuccessResult("工作任務已暫停"));
+    }
+
+    [HttpPatch("{id}/complete")]
+    public async Task<ActionResult<ApiResponse>> CompleteWorkTask(int id, [FromQuery] decimal? actualHours = null)
+    {
+        var result = await _workTaskService.CompleteWorkTaskAsync(id, actualHours);
+        
+        if (!result)
+        {
+            return NotFound(ApiResponse.ErrorResult("找不到指定的工作任務"));
+        }
+
+        return Ok(ApiResponse.SuccessResult("工作任務已完成"));
+    }
+
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteWorkTask(int id)
+    public async Task<ActionResult<ApiResponse>> DeleteWorkTask(int id)
     {
-        try
+        var result = await _workTaskService.DeleteWorkTaskAsync(id);
+        
+        if (!result)
         {
-            var workTasks = await _dataService.GetWorkTasksAsync();
-            var workTask = workTasks.FirstOrDefault(t => t.Id == id);
-            
-            if (workTask == null)
-            {
-                return NotFound(ApiResponse.ErrorResult("找不到指定的工作追蹤項目"));
-            }
-
-            workTasks.Remove(workTask);
-            await _dataService.SaveWorkTasksAsync(workTasks);
-
-            return Ok(ApiResponse.SuccessResult("工作追蹤項目刪除成功"));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的工作任務"));
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
+
+        return Ok(ApiResponse.SuccessResult("工作任務刪除成功"));
     }
+
+    [HttpPatch("batch/status")]
+    public async Task<ActionResult<ApiResponse<int>>> BatchUpdateStatus([FromBody] BatchUpdateWorkTaskStatusRequest request)
+    {
+        if (request.WorkTaskIds == null || !request.WorkTaskIds.Any())
+        {
+            return BadRequest(ApiResponse<int>.ErrorResult("工作任務ID列表不能為空"));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Status))
+        {
+            return BadRequest(ApiResponse<int>.ErrorResult("狀態不能為空"));
+        }
+
+        var updatedCount = await _workTaskService.BatchUpdateStatusAsync(request.WorkTaskIds, request.Status);
+        return Ok(ApiResponse<int>.SuccessResult(updatedCount, $"批量更新了{updatedCount}個工作任務的狀態"));
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<ApiResponse<object>>> GetWorkTaskStats([FromQuery] int userId)
+    {
+        var stats = await _workTaskService.GetWorkTaskStatsAsync(userId);
+        return Ok(ApiResponse<object>.SuccessResult(stats, "成功取得工作任務統計"));
+    }
+
+    [HttpGet("workload")]
+    public async Task<ActionResult<ApiResponse<object>>> GetWorkloadStats(
+        [FromQuery] int userId, 
+        [FromQuery] DateTime? startDate = null, 
+        [FromQuery] DateTime? endDate = null)
+    {
+        var stats = await _workTaskService.GetWorkloadStatsAsync(userId, startDate, endDate);
+        return Ok(ApiResponse<object>.SuccessResult(stats, "成功取得工作量統計"));
+    }
+}
+
+// 批量操作的請求模型
+public class BatchUpdateWorkTaskStatusRequest
+{
+    public List<int> WorkTaskIds { get; set; } = new();
+    public string Status { get; set; } = string.Empty;
 }

@@ -21,6 +21,23 @@ builder.Services.AddSwaggerGen();
 // Add JSON Data Service for development
 builder.Services.AddScoped<JsonDataService>();
 
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(PersonalManagerAPI.Mappings.MappingProfile));
+
+// Add Business Service Layer (starting with User service)
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserService, PersonalManagerAPI.Services.Implementation.UserService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPersonalProfileService, PersonalManagerAPI.Services.Implementation.PersonalProfileService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IEducationService, PersonalManagerAPI.Services.Implementation.EducationService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISkillService, PersonalManagerAPI.Services.Implementation.SkillService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkExperienceService, PersonalManagerAPI.Services.Implementation.WorkExperienceService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPortfolioService, PersonalManagerAPI.Services.Implementation.PortfolioService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICalendarEventService, PersonalManagerAPI.Services.Implementation.CalendarEventService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ITodoItemService, PersonalManagerAPI.Services.Implementation.TodoItemService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkTaskService, PersonalManagerAPI.Services.Implementation.WorkTaskService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
+// builder.Services.AddScoped<IGuestBookService, GuestBookService>();
+// builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
+
 // Add File Services for media handling
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IFileSecurityService, FileSecurityService>();

@@ -15,6 +15,9 @@ public class Portfolio
     
     public string? Description { get; set; }
     
+    [StringLength(50)]
+    public string? Type { get; set; }
+    
     public string? TechnologyUsed { get; set; }
     
     public string? Technologies { get; set; }

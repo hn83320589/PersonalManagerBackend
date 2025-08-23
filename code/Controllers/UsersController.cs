@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalManagerAPI.DTOs;
-using PersonalManagerAPI.Models;
-using PersonalManagerAPI.Services;
+using PersonalManagerAPI.DTOs.User;
+using PersonalManagerAPI.Services.Interfaces;
 
 namespace PersonalManagerAPI.Controllers;
 
@@ -9,162 +9,135 @@ namespace PersonalManagerAPI.Controllers;
 [Route("api/[controller]")]
 public class UsersController : BaseController
 {
-    private readonly JsonDataService _dataService;
+    private readonly IUserService _userService;
 
-    public UsersController(JsonDataService dataService)
+    public UsersController(IUserService userService)
     {
-        _dataService = dataService;
+        _userService = userService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<List<User>>>> GetUsers()
+    public async Task<ActionResult<ApiResponse<IEnumerable<UserResponseDto>>>> GetUsers([FromQuery] int skip = 0, [FromQuery] int take = 50)
     {
-        try
-        {
-            var users = await _dataService.GetUsersAsync();
-            return Ok(ApiResponse<List<User>>.SuccessResult(users, "成功取得使用者列表"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<List<User>>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+        var users = await _userService.GetAllUsersAsync(skip, take);
+        return Ok(ApiResponse<IEnumerable<UserResponseDto>>.SuccessResult(users, "成功取得使用者列表"));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<User>>> GetUser(int id)
+    public async Task<ActionResult<ApiResponse<UserResponseDto>>> GetUser(int id)
     {
-        try
+        var user = await _userService.GetUserByIdAsync(id);
+        
+        if (user == null)
         {
-            var user = await _dataService.GetByIdAsync<User>("users.json", id);
-            
-            if (user == null)
-            {
-                return NotFound(ApiResponse<User>.ErrorResult("找不到指定的使用者"));
-            }
+            return NotFound(ApiResponse<UserResponseDto>.ErrorResult("找不到指定的使用者"));
+        }
 
-            return Ok(ApiResponse<User>.SuccessResult(user, "成功取得使用者資料"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<User>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+        return Ok(ApiResponse<UserResponseDto>.SuccessResult(user, "成功取得使用者資料"));
     }
 
     [HttpPost]
-    public async Task<ActionResult<ApiResponse<User>>> CreateUser([FromBody] User user)
+    public async Task<ActionResult<ApiResponse<UserResponseDto>>> CreateUser([FromBody] CreateUserDto createUserDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                            .Select(e => e.ErrorMessage)
-                                            .ToList();
-                return BadRequest(ApiResponse<User>.ErrorResult("資料驗證失敗", errors));
-            }
-
-            var users = await _dataService.GetUsersAsync();
-            
-            // Check if username or email already exists
-            if (users.Any(u => u.Username == user.Username))
-            {
-                return BadRequest(ApiResponse<User>.ErrorResult("使用者名稱已存在"));
-            }
-            
-            if (users.Any(u => u.Email == user.Email))
-            {
-                return BadRequest(ApiResponse<User>.ErrorResult("電子郵件已存在"));
-            }
-
-            // Generate new ID
-            user.Id = users.Any() ? users.Max(u => u.Id) + 1 : 1;
-            user.CreatedAt = DateTime.UtcNow;
-            user.UpdatedAt = DateTime.UtcNow;
-            
-            users.Add(user);
-            await _dataService.SaveUsersAsync(users);
-
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, 
-                ApiResponse<User>.SuccessResult(user, "使用者建立成功"));
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<UserResponseDto>.ErrorResult("資料驗證失敗", errors));
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ApiResponse<User>.ErrorResult($"伺服器錯誤: {ex.Message}"));
-        }
+
+        var user = await _userService.CreateUserAsync(createUserDto);
+
+        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, 
+            ApiResponse<UserResponseDto>.SuccessResult(user, "使用者建立成功"));
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<User>>> UpdateUser(int id, [FromBody] User user)
+    public async Task<ActionResult<ApiResponse<UserResponseDto>>> UpdateUser(int id, [FromBody] UpdateUserDto updateUserDto)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values.SelectMany(v => v.Errors)
-                                            .Select(e => e.ErrorMessage)
-                                            .ToList();
-                return BadRequest(ApiResponse<User>.ErrorResult("資料驗證失敗", errors));
-            }
-
-            var users = await _dataService.GetUsersAsync();
-            var existingUser = users.FirstOrDefault(u => u.Id == id);
-            
-            if (existingUser == null)
-            {
-                return NotFound(ApiResponse<User>.ErrorResult("找不到指定的使用者"));
-            }
-
-            // Check for duplicate username/email (excluding current user)
-            if (users.Any(u => u.Id != id && u.Username == user.Username))
-            {
-                return BadRequest(ApiResponse<User>.ErrorResult("使用者名稱已存在"));
-            }
-            
-            if (users.Any(u => u.Id != id && u.Email == user.Email))
-            {
-                return BadRequest(ApiResponse<User>.ErrorResult("電子郵件已存在"));
-            }
-
-            // Update user properties
-            existingUser.Username = user.Username;
-            existingUser.Email = user.Email;
-            existingUser.FirstName = user.FirstName;
-            existingUser.LastName = user.LastName;
-            existingUser.Phone = user.Phone;
-            existingUser.IsActive = user.IsActive;
-            existingUser.UpdatedAt = DateTime.UtcNow;
-
-            await _dataService.SaveUsersAsync(users);
-
-            return Ok(ApiResponse<User>.SuccessResult(existingUser, "使用者更新成功"));
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse<UserResponseDto>.ErrorResult("資料驗證失敗", errors));
         }
-        catch (Exception ex)
+
+        var user = await _userService.UpdateUserAsync(id, updateUserDto);
+        
+        if (user == null)
         {
-            return StatusCode(500, ApiResponse<User>.ErrorResult($"伺服器錯誤: {ex.Message}"));
+            return NotFound(ApiResponse<UserResponseDto>.ErrorResult("找不到指定的使用者"));
         }
+
+        return Ok(ApiResponse<UserResponseDto>.SuccessResult(user, "使用者更新成功"));
     }
 
     [HttpDelete("{id}")]
     public async Task<ActionResult<ApiResponse>> DeleteUser(int id)
     {
-        try
+        var result = await _userService.DeleteUserAsync(id);
+        
+        if (!result)
         {
-            var users = await _dataService.GetUsersAsync();
-            var user = users.FirstOrDefault(u => u.Id == id);
-            
-            if (user == null)
-            {
-                return NotFound(ApiResponse.ErrorResult("找不到指定的使用者"));
-            }
-
-            users.Remove(user);
-            await _dataService.SaveUsersAsync(users);
-
-            return Ok(ApiResponse.SuccessResult("使用者刪除成功"));
+            return NotFound(ApiResponse.ErrorResult("找不到指定的使用者"));
         }
-        catch (Exception ex)
+
+        return Ok(ApiResponse.SuccessResult("使用者刪除成功"));
+    }
+
+    [HttpGet("username/{username}")]
+    public async Task<ActionResult<ApiResponse<UserResponseDto>>> GetUserByUsername(string username)
+    {
+        var user = await _userService.GetUserByUsernameAsync(username);
+        
+        if (user == null)
         {
-            return StatusCode(500, ApiResponse.ErrorResult($"伺服器錯誤: {ex.Message}"));
+            return NotFound(ApiResponse<UserResponseDto>.ErrorResult("找不到指定的使用者"));
         }
+
+        return Ok(ApiResponse<UserResponseDto>.SuccessResult(user, "成功取得使用者資料"));
+    }
+
+    [HttpGet("email/{email}")]
+    public async Task<ActionResult<ApiResponse<UserResponseDto>>> GetUserByEmail(string email)
+    {
+        var user = await _userService.GetUserByEmailAsync(email);
+        
+        if (user == null)
+        {
+            return NotFound(ApiResponse<UserResponseDto>.ErrorResult("找不到指定的使用者"));
+        }
+
+        return Ok(ApiResponse<UserResponseDto>.SuccessResult(user, "成功取得使用者資料"));
+    }
+
+    [HttpPost("{id}/change-password")]
+    public async Task<ActionResult<ApiResponse>> ChangePassword(int id, [FromBody] ChangePasswordDto changePasswordDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                        .Select(e => e.ErrorMessage)
+                                        .ToList();
+            return BadRequest(ApiResponse.ErrorResult("資料驗證失敗", errors));
+        }
+
+        var result = await _userService.ChangePasswordAsync(id, changePasswordDto);
+        
+        if (!result)
+        {
+            return BadRequest(ApiResponse.ErrorResult("密碼變更失敗，請檢查舊密碼是否正確"));
+        }
+
+        return Ok(ApiResponse.SuccessResult("密碼變更成功"));
+    }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<ApiResponse<object>>> GetUserStats()
+    {
+        var stats = await _userService.GetUserStatsAsync();
+        return Ok(ApiResponse<object>.SuccessResult(stats, "成功取得使用者統計資料"));
     }
 }

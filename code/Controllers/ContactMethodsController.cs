@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalManagerAPI.DTOs;
 using PersonalManagerAPI.Models;
 using PersonalManagerAPI.Services;
+using PersonalManagerAPI.Services.Interfaces;
+using PersonalManagerAPI.DTOs.ContactMethod;
 
 namespace PersonalManagerAPI.Controllers;
 
@@ -9,11 +11,11 @@ namespace PersonalManagerAPI.Controllers;
 [Route("api/[controller]")]
 public class ContactMethodsController : BaseController
 {
-    private readonly JsonDataService _dataService;
+    private readonly IContactMethodService _contactMethodService;
 
-    public ContactMethodsController(JsonDataService dataService)
+    public ContactMethodsController(IContactMethodService contactMethodService)
     {
-        _dataService = dataService;
+        _contactMethodService = contactMethodService;
     }
 
     /// <summary>
@@ -24,17 +26,13 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var publicMethods = contactMethods
-                .Where(c => c.IsPublic)
-                .OrderBy(c => c.SortOrder)
-                .ToList();
+            var publicMethods = await _contactMethodService.GetPublicContactMethodsAsync();
                 
-            return Ok(ApiResponse<List<ContactMethod>>.SuccessResult(publicMethods, "成功取得聯絡方式列表"));
+            return Ok(ApiResponse<object>.SuccessResult(publicMethods, "成功取得聯絡方式列表"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<ContactMethod>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -46,19 +44,18 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var contactMethod = contactMethods.FirstOrDefault(c => c.Id == id);
+            var contactMethod = await _contactMethodService.GetContactMethodByIdAsync(id);
             
             if (contactMethod == null)
             {
-                return NotFound(ApiResponse<ContactMethod>.ErrorResult("找不到指定的聯絡方式"));
+                return NotFound(ApiResponse<object>.ErrorResult("找不到指定的聯絡方式"));
             }
 
-            return Ok(ApiResponse<ContactMethod>.SuccessResult(contactMethod, "成功取得聯絡方式資料"));
+            return Ok(ApiResponse<object>.SuccessResult(contactMethod, "成功取得聯絡方式資料"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<ContactMethod>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -70,23 +67,21 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var query = contactMethods.Where(c => c.UserId == userId);
-
-            if (!includePrivate)
+            IEnumerable<ContactMethodResponseDto> userContactMethods;
+            if (includePrivate)
             {
-                query = query.Where(c => c.IsPublic);
+                userContactMethods = await _contactMethodService.GetContactMethodsByUserIdAsync(userId);
             }
-
-            var userContactMethods = query
-                .OrderBy(c => c.SortOrder)
-                .ToList();
+            else
+            {
+                userContactMethods = await _contactMethodService.GetPublicContactMethodsAsync(userId);
+            }
                 
-            return Ok(ApiResponse<List<ContactMethod>>.SuccessResult(userContactMethods, "成功取得使用者聯絡方式列表"));
+            return Ok(ApiResponse<object>.SuccessResult(userContactMethods, "成功取得使用者聯絡方式列表"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<ContactMethod>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -98,18 +93,19 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var filteredMethods = contactMethods
-                .Where(c => c.IsPublic && 
-                           c.Type.ToString().Equals(type, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(c => c.SortOrder)
-                .ToList();
+            // 解析 ContactType 枚舉
+            if (!Enum.TryParse<ContactType>(type, true, out var contactType))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult($"不支援的聯絡方式類型: {type}"));
+            }
+
+            var filteredMethods = await _contactMethodService.GetContactMethodsByTypeAsync(contactType);
                 
-            return Ok(ApiResponse<List<ContactMethod>>.SuccessResult(filteredMethods, $"成功取得 {type} 類型聯絡方式"));
+            return Ok(ApiResponse<object>.SuccessResult(filteredMethods, $"成功取得 {type} 類型聯絡方式"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<ContactMethod>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -121,20 +117,26 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var socialTypes = new[] { "Facebook", "Twitter", "Instagram", "LinkedIn", "GitHub", "YouTube" };
+            var socialTypes = new[] { 
+                ContactType.Facebook, 
+                ContactType.Twitter, 
+                ContactType.Instagram, 
+                ContactType.LinkedIn, 
+                ContactType.GitHub
+            };
             
-            var socialMethods = contactMethods
-                .Where(c => c.IsPublic && 
-                           socialTypes.Contains(c.Type.ToString(), StringComparer.OrdinalIgnoreCase))
-                .OrderBy(c => c.SortOrder)
-                .ToList();
+            var allSocialMethods = new List<ContactMethodResponseDto>();
+            foreach (var type in socialTypes)
+            {
+                var methods = await _contactMethodService.GetContactMethodsByTypeAsync(type);
+                allSocialMethods.AddRange(methods);
+            }
                 
-            return Ok(ApiResponse<List<ContactMethod>>.SuccessResult(socialMethods, "成功取得社群媒體聯絡方式"));
+            return Ok(ApiResponse<object>.SuccessResult(allSocialMethods, "成功取得社群媒體聯絡方式"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<ContactMethod>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -146,20 +148,23 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var basicTypes = new[] { "Email", "Phone", "Address" };
+            var basicTypes = new[] { 
+                ContactType.Email, 
+                ContactType.Phone
+            };
             
-            var basicMethods = contactMethods
-                .Where(c => c.IsPublic && 
-                           basicTypes.Contains(c.Type.ToString(), StringComparer.OrdinalIgnoreCase))
-                .OrderBy(c => c.SortOrder)
-                .ToList();
+            var allBasicMethods = new List<ContactMethodResponseDto>();
+            foreach (var type in basicTypes)
+            {
+                var methods = await _contactMethodService.GetContactMethodsByTypeAsync(type);
+                allBasicMethods.AddRange(methods);
+            }
                 
-            return Ok(ApiResponse<List<ContactMethod>>.SuccessResult(basicMethods, "成功取得基本聯絡資訊"));
+            return Ok(ApiResponse<object>.SuccessResult(allBasicMethods, "成功取得基本聯絡資訊"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<ContactMethod>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -167,37 +172,17 @@ public class ContactMethodsController : BaseController
     /// 建立聯絡方式
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> CreateContactMethod([FromBody] ContactMethod contactMethod)
+    public async Task<IActionResult> CreateContactMethod([FromBody] CreateContactMethodDto createContactMethodDto)
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
+            var contactMethod = await _contactMethodService.CreateContactMethodAsync(createContactMethodDto);
 
-            // 驗證必要欄位
-            if (string.IsNullOrEmpty(contactMethod.Value))
-            {
-                return BadRequest(ApiResponse<ContactMethod>.ErrorResult("類型和內容為必填項目"));
-            }
-
-            // 驗證Email格式
-            if (contactMethod.Type == ContactType.Email && 
-                !IsValidEmail(contactMethod.Value))
-            {
-                return BadRequest(ApiResponse<ContactMethod>.ErrorResult("Email格式不正確"));
-            }
-            
-            contactMethod.Id = contactMethods.Count > 0 ? contactMethods.Max(c => c.Id) + 1 : 1;
-            contactMethod.CreatedAt = DateTime.UtcNow;
-            contactMethod.UpdatedAt = DateTime.UtcNow;
-            
-            contactMethods.Add(contactMethod);
-            await _dataService.SaveContactMethodsAsync(contactMethods);
-
-            return Ok(ApiResponse<ContactMethod>.SuccessResult(contactMethod, "聯絡方式建立成功"));
+            return Ok(ApiResponse<object>.SuccessResult(contactMethod, "聯絡方式建立成功"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<ContactMethod>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -205,40 +190,22 @@ public class ContactMethodsController : BaseController
     /// 更新聯絡方式
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateContactMethod(int id, [FromBody] ContactMethod updatedMethod)
+    public async Task<IActionResult> UpdateContactMethod(int id, [FromBody] UpdateContactMethodDto updateContactMethodDto)
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var contactMethod = contactMethods.FirstOrDefault(c => c.Id == id);
+            var contactMethod = await _contactMethodService.UpdateContactMethodAsync(id, updateContactMethodDto);
             
             if (contactMethod == null)
             {
-                return NotFound(ApiResponse<ContactMethod>.ErrorResult("找不到指定的聯絡方式"));
+                return NotFound(ApiResponse<object>.ErrorResult("找不到指定的聯絡方式"));
             }
 
-            // 驗證Email格式
-            if (updatedMethod.Type == ContactType.Email && 
-                !IsValidEmail(updatedMethod.Value))
-            {
-                return BadRequest(ApiResponse<ContactMethod>.ErrorResult("Email格式不正確"));
-            }
-
-            contactMethod.Type = updatedMethod.Type;
-            contactMethod.Label = updatedMethod.Label;
-            contactMethod.Value = updatedMethod.Value;
-            contactMethod.Icon = updatedMethod.Icon;
-            contactMethod.IsPublic = updatedMethod.IsPublic;
-            contactMethod.SortOrder = updatedMethod.SortOrder;
-            contactMethod.UpdatedAt = DateTime.UtcNow;
-
-            await _dataService.SaveContactMethodsAsync(contactMethods);
-
-            return Ok(ApiResponse<ContactMethod>.SuccessResult(contactMethod, "聯絡方式更新成功"));
+            return Ok(ApiResponse<object>.SuccessResult(contactMethod, "聯絡方式更新成功"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<ContactMethod>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -250,16 +217,12 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            var contactMethod = contactMethods.FirstOrDefault(c => c.Id == id);
+            var success = await _contactMethodService.DeleteContactMethodAsync(id);
             
-            if (contactMethod == null)
+            if (!success)
             {
                 return NotFound(ApiResponse.ErrorResult("找不到指定的聯絡方式"));
             }
-
-            contactMethods.Remove(contactMethod);
-            await _dataService.SaveContactMethodsAsync(contactMethods);
 
             return Ok(ApiResponse.SuccessResult("聯絡方式刪除成功"));
         }
@@ -277,19 +240,18 @@ public class ContactMethodsController : BaseController
     {
         try
         {
-            var contactMethods = await _dataService.GetContactMethodsAsync();
-            
+            var orders = new Dictionary<int, int>();
             for (int i = 0; i < orderedIds.Count; i++)
             {
-                var method = contactMethods.FirstOrDefault(c => c.Id == orderedIds[i]);
-                if (method != null)
-                {
-                    method.SortOrder = i + 1;
-                    method.UpdatedAt = DateTime.UtcNow;
-                }
+                orders[orderedIds[i]] = i + 1;
             }
-
-            await _dataService.SaveContactMethodsAsync(contactMethods);
+            
+            var success = await _contactMethodService.BatchUpdateContactMethodOrderAsync(orders);
+            
+            if (!success)
+            {
+                return BadRequest(ApiResponse.ErrorResult("排序更新失敗"));
+            }
 
             return Ok(ApiResponse.SuccessResult("聯絡方式排序更新成功"));
         }
@@ -299,16 +261,4 @@ public class ContactMethodsController : BaseController
         }
     }
 
-    private bool IsValidEmail(string email)
-    {
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }

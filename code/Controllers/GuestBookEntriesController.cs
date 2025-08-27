@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalManagerAPI.DTOs;
 using PersonalManagerAPI.Models;
 using PersonalManagerAPI.Services;
+using PersonalManagerAPI.Services.Interfaces;
+using PersonalManagerAPI.DTOs.GuestBookEntry;
 
 namespace PersonalManagerAPI.Controllers;
 
@@ -9,11 +11,11 @@ namespace PersonalManagerAPI.Controllers;
 [Route("api/[controller]")]
 public class GuestBookEntriesController : BaseController
 {
-    private readonly JsonDataService _dataService;
+    private readonly IGuestBookService _guestBookService;
 
-    public GuestBookEntriesController(JsonDataService dataService)
+    public GuestBookEntriesController(IGuestBookService guestBookService)
     {
-        _dataService = dataService;
+        _guestBookService = guestBookService;
     }
 
     /// <summary>
@@ -24,24 +26,14 @@ public class GuestBookEntriesController : BaseController
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var query = entries.AsQueryable();
-
-            if (!includeReplies)
-            {
-                query = query.Where(e => e.ParentId == null);
-            }
-
-            var totalCount = query.Count();
-            var pagedEntries = query
-                .OrderByDescending(e => e.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            var skip = (page - 1) * pageSize;
+            var entries = await _guestBookService.GetAllEntriesAsync(skip, pageSize, includeReplies);
+            var totalEntries = await _guestBookService.GetAllEntriesAsync(0, int.MaxValue, includeReplies);
+            var totalCount = totalEntries.Count();
 
             var result = new
             {
-                Entries = pagedEntries,
+                Entries = entries,
                 TotalCount = totalCount,
                 Page = page,
                 PageSize = pageSize,
@@ -64,19 +56,18 @@ public class GuestBookEntriesController : BaseController
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var entry = entries.FirstOrDefault(e => e.Id == id);
+            var entry = await _guestBookService.GetEntryByIdAsync(id);
             
             if (entry == null)
             {
-                return NotFound(ApiResponse<GuestBookEntry>.ErrorResult("找不到指定的留言"));
+                return NotFound(ApiResponse<object>.ErrorResult("找不到指定的留言"));
             }
 
-            return Ok(ApiResponse<GuestBookEntry>.SuccessResult(entry, "成功取得留言資料"));
+            return Ok(ApiResponse<object>.SuccessResult(entry, "成功取得留言資料"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<GuestBookEntry>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -88,17 +79,13 @@ public class GuestBookEntriesController : BaseController
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var replies = entries
-                .Where(e => e.ParentId == parentId)
-                .OrderBy(e => e.CreatedAt)
-                .ToList();
-                
-            return Ok(ApiResponse<List<GuestBookEntry>>.SuccessResult(replies, "成功取得回覆列表"));
+            var replies = await _guestBookService.GetRepliesAsync(parentId);
+            
+            return Ok(ApiResponse<object>.SuccessResult(replies, "成功取得回覆列表"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<GuestBookEntry>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -110,18 +97,13 @@ public class GuestBookEntriesController : BaseController
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var recentEntries = entries
-                .Where(e => e.ParentId == null) // 只取主留言，不包含回覆
-                .OrderByDescending(e => e.CreatedAt)
-                .Take(limit)
-                .ToList();
-                
-            return Ok(ApiResponse<List<GuestBookEntry>>.SuccessResult(recentEntries, "成功取得最新留言"));
+            var recentEntries = await _guestBookService.GetRecentEntriesAsync(limit);
+            
+            return Ok(ApiResponse<object>.SuccessResult(recentEntries, "成功取得最新留言"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<GuestBookEntry>>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -129,47 +111,20 @@ public class GuestBookEntriesController : BaseController
     /// 建立留言
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> CreateGuestBookEntry([FromBody] GuestBookEntry entry)
+    public async Task<IActionResult> CreateGuestBookEntry([FromBody] CreateGuestBookEntryDto createEntryDto)
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-
-            // 驗證必要欄位
-            if (string.IsNullOrEmpty(entry.Name) || string.IsNullOrEmpty(entry.Message))
-            {
-                return BadRequest(ApiResponse<GuestBookEntry>.ErrorResult("姓名和留言內容為必填項目"));
-            }
-
-            // 驗證Email格式（如果有提供）
-            if (!string.IsNullOrEmpty(entry.Email) && !IsValidEmail(entry.Email))
-            {
-                return BadRequest(ApiResponse<GuestBookEntry>.ErrorResult("Email格式不正確"));
-            }
-
-            // 如果是回覆，檢查父留言是否存在
-            if (entry.ParentId.HasValue)
-            {
-                var parentEntry = entries.FirstOrDefault(e => e.Id == entry.ParentId.Value);
-                if (parentEntry == null)
-                {
-                    return BadRequest(ApiResponse<GuestBookEntry>.ErrorResult("找不到要回覆的留言"));
-                }
-            }
+            var ipAddress = GetClientIpAddress();
+            var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
             
-            entry.Id = entries.Count > 0 ? entries.Max(e => e.Id) + 1 : 1;
-            entry.CreatedAt = DateTime.UtcNow;
-            entry.UpdatedAt = DateTime.UtcNow;
-            entry.IpAddress = GetClientIpAddress(); // 記錄IP地址
-            
-            entries.Add(entry);
-            await _dataService.SaveGuestBookEntriesAsync(entries);
+            var entry = await _guestBookService.CreateEntryAsync(createEntryDto, ipAddress, userAgent);
 
-            return Ok(ApiResponse<GuestBookEntry>.SuccessResult(entry, "留言建立成功"));
+            return Ok(ApiResponse<object>.SuccessResult(entry, "留言建立成功"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<GuestBookEntry>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -177,29 +132,22 @@ public class GuestBookEntriesController : BaseController
     /// 更新留言（僅限編輯內容，不能修改作者資訊）
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateGuestBookEntry(int id, [FromBody] GuestBookEntry updatedEntry)
+    public async Task<IActionResult> UpdateGuestBookEntry(int id, [FromBody] UpdateGuestBookEntryDto updateEntryDto)
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var entry = entries.FirstOrDefault(e => e.Id == id);
+            var entry = await _guestBookService.UpdateEntryAsync(id, updateEntryDto);
             
             if (entry == null)
             {
-                return NotFound(ApiResponse<GuestBookEntry>.ErrorResult("找不到指定的留言"));
+                return NotFound(ApiResponse<object>.ErrorResult("找不到指定的留言"));
             }
 
-            // 只允許更新留言內容，不允許修改作者資訊
-            entry.Message = updatedEntry.Message;
-            entry.UpdatedAt = DateTime.UtcNow;
-
-            await _dataService.SaveGuestBookEntriesAsync(entries);
-
-            return Ok(ApiResponse<GuestBookEntry>.SuccessResult(entry, "留言更新成功"));
+            return Ok(ApiResponse<object>.SuccessResult(entry, "留言更新成功"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<GuestBookEntry>.ErrorResult("伺服器錯誤: " + ex.Message));
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 
@@ -211,26 +159,12 @@ public class GuestBookEntriesController : BaseController
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var entry = entries.FirstOrDefault(e => e.Id == id);
+            var success = await _guestBookService.DeleteEntryAsync(id);
             
-            if (entry == null)
+            if (!success)
             {
                 return NotFound(ApiResponse.ErrorResult("找不到指定的留言"));
             }
-
-            // 如果是主留言，同時刪除所有回覆
-            if (entry.ParentId == null)
-            {
-                var replies = entries.Where(e => e.ParentId == id).ToList();
-                foreach (var reply in replies)
-                {
-                    entries.Remove(reply);
-                }
-            }
-
-            entries.Remove(entry);
-            await _dataService.SaveGuestBookEntriesAsync(entries);
 
             return Ok(ApiResponse.SuccessResult("留言刪除成功"));
         }
@@ -248,31 +182,18 @@ public class GuestBookEntriesController : BaseController
     {
         try
         {
-            var entries = await _dataService.GetGuestBookEntriesAsync();
-            var searchResults = entries
-                .Where(e => e.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                           e.Message.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(e => e.CreatedAt)
-                .ToList();
-                
-            return Ok(ApiResponse<List<GuestBookEntry>>.SuccessResult(searchResults, $"搜尋「{keyword}」找到 {searchResults.Count} 則留言"));
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(ApiResponse<object>.ErrorResult("搜尋關鍵字不能為空"));
+            }
+
+            var searchResults = await _guestBookService.SearchEntriesAsync(keyword);
+            
+            return Ok(ApiResponse<object>.SuccessResult(searchResults, $"搜尋「{keyword}」找到 {searchResults.Count()} 則留言"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<List<GuestBookEntry>>.ErrorResult("伺服器錯誤: " + ex.Message));
-        }
-    }
-
-    private bool IsValidEmail(string email)
-    {
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
+            return StatusCode(500, ApiResponse<object>.ErrorResult("伺服器錯誤: " + ex.Message));
         }
     }
 

@@ -35,8 +35,8 @@ builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICalendarEvent
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ITodoItemService, PersonalManagerAPI.Services.Implementation.TodoItemService>();
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkTaskService, PersonalManagerAPI.Services.Implementation.WorkTaskService>();
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
-// builder.Services.AddScoped<IGuestBookService, GuestBookService>();
-// builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IGuestBookService, PersonalManagerAPI.Services.Implementation.GuestBookService>();
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
 
 // Add File Services for media handling
 builder.Services.AddScoped<IFileService, FileService>();
@@ -45,6 +45,7 @@ builder.Services.AddScoped<IFileQuarantineService, FileQuarantineService>();
 
 // Add Authentication Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<PersonalManagerAPI.Services.Interfaces.ITokenBlacklistService, PersonalManagerAPI.Services.Implementation.TokenBlacklistService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -128,6 +129,7 @@ app.UseCors("AllowFrontend");
 
 // Add Authentication and Authorization middleware
 app.UseAuthentication(); // Must come before UseAuthorization
+app.UseMiddleware<PersonalManagerAPI.Middleware.JwtTokenValidationMiddleware>(); // JWT Token blacklist validation
 app.UseAuthorization();
 
 app.MapControllers();

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using PersonalManagerAPI.DTOs;
 using PersonalManagerAPI.Models;
+using PersonalManagerAPI.Services.Interfaces;
 
 namespace PersonalManagerAPI.Services
 {
@@ -16,12 +17,14 @@ namespace PersonalManagerAPI.Services
         private readonly JsonDataService _dataService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
+        private readonly ITokenBlacklistService _tokenBlacklistService;
 
-        public AuthService(JsonDataService dataService, IConfiguration configuration, ILogger<AuthService> logger)
+        public AuthService(JsonDataService dataService, IConfiguration configuration, ILogger<AuthService> logger, ITokenBlacklistService tokenBlacklistService)
         {
             _dataService = dataService;
             _configuration = configuration;
             _logger = logger;
+            _tokenBlacklistService = tokenBlacklistService;
         }
 
         /// <summary>
@@ -311,6 +314,192 @@ namespace PersonalManagerAPI.Services
             }
             catch
             {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 撤銷 Access Token (加入黑名單)
+        /// </summary>
+        public async Task<bool> RevokeAccessTokenAsync(string accessToken)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                if (!handler.CanReadToken(accessToken))
+                {
+                    _logger.LogWarning("無效的 Access Token 格式");
+                    return false;
+                }
+
+                var jwtToken = handler.ReadJwtToken(accessToken);
+                var jti = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                
+                if (string.IsNullOrEmpty(jti))
+                {
+                    _logger.LogWarning("Access Token 缺少 JTI 聲明");
+                    return false;
+                }
+
+                var expiryTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(jwtToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Exp).Value)).DateTime;
+                
+                await _tokenBlacklistService.AddToBlacklistAsync(jti, expiryTime);
+                _logger.LogInformation("Access Token 已加入黑名單: {Jti}", jti);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "撤銷 Access Token 失敗");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 登出並撤銷所有使用者 Token
+        /// </summary>
+        public async Task<bool> LogoutAsync(int userId, string? accessToken = null)
+        {
+            try
+            {
+                // 1. 撤銷 Refresh Token
+                var users = await _dataService.GetAllAsync<User>();
+                var user = users.FirstOrDefault(u => u.Id == userId);
+                
+                if (user != null)
+                {
+                    user.RefreshToken = null;
+                    user.RefreshTokenExpiryTime = null;
+                    await _dataService.UpdateAsync(user);
+                }
+
+                // 2. 將 Access Token 加入黑名單
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    await RevokeAccessTokenAsync(accessToken);
+                }
+
+                _logger.LogInformation("使用者登出成功: {UserId}", userId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "使用者登出失敗: {UserId}", userId);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 檢查 Refresh Token 是否需要自動續期
+        /// </summary>
+        public async Task<bool> ShouldAutoRenewRefreshTokenAsync(string refreshToken)
+        {
+            try
+            {
+                var users = await _dataService.GetAllAsync<User>();
+                var user = users.FirstOrDefault(u => u.RefreshToken == refreshToken && u.IsActive);
+
+                if (user == null || user.RefreshTokenExpiryTime == null)
+                {
+                    return false;
+                }
+
+                // 如果 Refresh Token 在24小時內過期，則需要自動續期
+                var remainingTime = user.RefreshTokenExpiryTime.Value - DateTime.UtcNow;
+                var autoRenewThreshold = TimeSpan.FromHours(24);
+
+                _logger.LogInformation("Refresh Token 剩餘時間: {RemainingTime}, 續期閾值: {Threshold}", 
+                    remainingTime, autoRenewThreshold);
+
+                return remainingTime <= autoRenewThreshold && remainingTime > TimeSpan.Zero;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "檢查 Refresh Token 自動續期狀態失敗");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 自動續期 Refresh Token
+        /// </summary>
+        public async Task<TokenResponseDto?> AutoRenewRefreshTokenAsync(string refreshToken)
+        {
+            try
+            {
+                var users = await _dataService.GetAllAsync<User>();
+                var user = users.FirstOrDefault(u => u.RefreshToken == refreshToken && u.IsActive);
+
+                if (user == null || user.RefreshTokenExpiryTime == null)
+                {
+                    _logger.LogWarning("自動續期失敗 - 無效的 Refresh Token");
+                    return null;
+                }
+
+                // 檢查是否仍在有效期內
+                if (user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+                {
+                    _logger.LogWarning("自動續期失敗 - Refresh Token 已過期");
+                    return null;
+                }
+
+                // 產生新的 Token 組
+                var newAccessToken = GenerateAccessToken(user);
+                var newRefreshToken = GenerateRefreshToken();
+
+                // 更新使用者的 Refresh Token，延長有效期
+                user.RefreshToken = newRefreshToken;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // 重新延長7天
+                user.LastLoginDate = DateTime.UtcNow; // 更新最後活躍時間
+                await _dataService.UpdateAsync(user);
+
+                _logger.LogInformation("Refresh Token 自動續期成功: {Username}", user.Username);
+
+                return new TokenResponseDto
+                {
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    TokenType = "Bearer",
+                    ExpiresIn = ((DateTimeOffset)DateTime.UtcNow.AddHours(1)).ToUnixTimeSeconds(),
+                    User = new UserInfoDto
+                    {
+                        Id = user.Id,
+                        Username = user.Username,
+                        Email = user.Email,
+                        FullName = user.FullName,
+                        Role = user.Role,
+                        IsActive = user.IsActive
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Refresh Token 自動續期過程發生錯誤");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 取得 Refresh Token 剩餘有效時間
+        /// </summary>
+        public async Task<TimeSpan?> GetRefreshTokenRemainingTimeAsync(string refreshToken)
+        {
+            try
+            {
+                var users = await _dataService.GetAllAsync<User>();
+                var user = users.FirstOrDefault(u => u.RefreshToken == refreshToken && u.IsActive);
+
+                if (user == null || user.RefreshTokenExpiryTime == null)
+                {
+                    return null;
+                }
+
+                var remainingTime = user.RefreshTokenExpiryTime.Value - DateTime.UtcNow;
+                return remainingTime > TimeSpan.Zero ? remainingTime : TimeSpan.Zero;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "取得 Refresh Token 剩餘時間失敗");
                 return null;
             }
         }

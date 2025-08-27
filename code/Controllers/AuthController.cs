@@ -126,6 +126,34 @@ namespace PersonalManagerAPI.Controllers
         }
 
         /// <summary>
+        /// 完整登出 (撤銷所有使用者 Token)
+        /// </summary>
+        /// <returns>操作結果</returns>
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<object>>> Logout()
+        {
+            var userIdClaim = User.FindFirst("userId")?.Value;
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(ApiResponse<object>.Failure("無效的令牌"));
+            }
+
+            // 取得當前的 Access Token
+            var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+            var accessToken = authHeader?.Split(" ").Last();
+
+            var result = await _authService.LogoutAsync(userId, accessToken);
+            if (!result)
+            {
+                return BadRequest(ApiResponse<object>.Failure("登出失敗"));
+            }
+
+            _logger.LogInformation("使用者完整登出成功: {UserId}", userId);
+            return Ok(ApiResponse<object>.Success(null, "完整登出成功"));
+        }
+
+        /// <summary>
         /// 取得當前使用者資訊
         /// </summary>
         /// <returns>使用者資訊</returns>
@@ -214,6 +242,89 @@ namespace PersonalManagerAPI.Controllers
                 Role = role,
                 ServerTime = DateTime.UtcNow
             }, "受保護端點存取成功"));
+        }
+
+        /// <summary>
+        /// 智慧 Token 刷新 (檢查是否需要自動續期)
+        /// </summary>
+        /// <param name="refreshTokenDto">重新整理令牌請求</param>
+        /// <returns>Token 刷新結果</returns>
+        [HttpPost("smart-refresh")]
+        public async Task<ActionResult<ApiResponse<TokenResponseDto>>> SmartRefresh([FromBody] RefreshTokenDto refreshTokenDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(ApiResponse<TokenResponseDto>.Failure("資料驗證失敗", errors));
+            }
+
+            // 檢查是否需要自動續期
+            var shouldAutoRenew = await _authService.ShouldAutoRenewRefreshTokenAsync(refreshTokenDto.RefreshToken);
+            
+            TokenResponseDto? result;
+            string message;
+
+            if (shouldAutoRenew)
+            {
+                // 執行自動續期 (會產生新的 Refresh Token)
+                result = await _authService.AutoRenewRefreshTokenAsync(refreshTokenDto.RefreshToken);
+                message = result != null ? "Token 自動續期成功" : "Token 自動續期失敗";
+                _logger.LogInformation("執行 Refresh Token 自動續期");
+            }
+            else
+            {
+                // 執行一般刷新 (保持相同的 Refresh Token)
+                result = await _authService.RefreshTokenAsync(refreshTokenDto.RefreshToken);
+                message = result != null ? "Token 刷新成功" : "Token 刷新失敗";
+                _logger.LogInformation("執行一般 Token 刷新");
+            }
+
+            if (result == null)
+            {
+                return Unauthorized(ApiResponse<TokenResponseDto>.Failure("Token 無效或已過期"));
+            }
+
+            return Ok(ApiResponse<TokenResponseDto>.Success(result, message));
+        }
+
+        /// <summary>
+        /// 檢查 Token 狀態和剩餘時間
+        /// </summary>
+        /// <param name="refreshTokenDto">重新整理令牌請求</param>
+        /// <returns>Token 狀態資訊</returns>
+        [HttpPost("token-status")]
+        public async Task<ActionResult<ApiResponse<object>>> GetTokenStatus([FromBody] RefreshTokenDto refreshTokenDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(ApiResponse<object>.Failure("資料驗證失敗", errors));
+            }
+
+            var remainingTime = await _authService.GetRefreshTokenRemainingTimeAsync(refreshTokenDto.RefreshToken);
+            if (remainingTime == null)
+            {
+                return BadRequest(ApiResponse<object>.Failure("無效的 Refresh Token"));
+            }
+
+            var shouldAutoRenew = await _authService.ShouldAutoRenewRefreshTokenAsync(refreshTokenDto.RefreshToken);
+
+            return Ok(ApiResponse<object>.Success(new
+            {
+                IsValid = true,
+                RemainingTime = remainingTime.Value,
+                RemainingDays = remainingTime.Value.TotalDays,
+                RemainingHours = remainingTime.Value.TotalHours,
+                ShouldAutoRenew = shouldAutoRenew,
+                AutoRenewThreshold = TimeSpan.FromHours(24),
+                ServerTime = DateTime.UtcNow
+            }, "Token 狀態查詢成功"));
         }
     }
 }

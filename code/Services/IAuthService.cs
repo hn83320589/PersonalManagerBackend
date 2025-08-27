@@ -29,6 +29,16 @@ namespace PersonalManagerAPI.Services
         Task<bool> RevokeTokenAsync(string refreshToken);
 
         /// <summary>
+        /// 撤銷 Access Token (加入黑名單)
+        /// </summary>
+        Task<bool> RevokeAccessTokenAsync(string accessToken);
+
+        /// <summary>
+        /// 登出並撤銷所有使用者 Token
+        /// </summary>
+        Task<bool> LogoutAsync(int userId, string? accessToken = null);
+
+        /// <summary>
         /// 驗證密碼
         /// </summary>
         bool VerifyPassword(string password, string hashedPassword);
@@ -52,5 +62,20 @@ namespace PersonalManagerAPI.Services
         /// 從令牌取得使用者 ID
         /// </summary>
         int? GetUserIdFromToken(string token);
+
+        /// <summary>
+        /// 檢查 Refresh Token 是否需要自動續期
+        /// </summary>
+        Task<bool> ShouldAutoRenewRefreshTokenAsync(string refreshToken);
+
+        /// <summary>
+        /// 自動續期 Refresh Token
+        /// </summary>
+        Task<TokenResponseDto?> AutoRenewRefreshTokenAsync(string refreshToken);
+
+        /// <summary>
+        /// 取得 Token 剩餘有效時間
+        /// </summary>
+        Task<TimeSpan?> GetRefreshTokenRemainingTimeAsync(string refreshToken);
     }
 }

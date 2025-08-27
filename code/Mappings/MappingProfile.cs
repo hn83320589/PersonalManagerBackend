@@ -10,6 +10,8 @@ using PersonalManagerAPI.DTOs.CalendarEvent;
 using PersonalManagerAPI.DTOs.TodoItem;
 using PersonalManagerAPI.DTOs.WorkTask;
 using PersonalManagerAPI.DTOs.BlogPost;
+using PersonalManagerAPI.DTOs.GuestBookEntry;
+using PersonalManagerAPI.DTOs.ContactMethod;
 
 namespace PersonalManagerAPI.Mappings;
 
@@ -27,6 +29,8 @@ public class MappingProfile : Profile
         CreateTodoItemMappings();
         CreateWorkTaskMappings();
         CreateBlogPostMappings();
+        CreateGuestBookEntryMappings();
+        CreateContactMethodMappings();
     }
 
     private void CreateUserMappings()
@@ -271,5 +275,40 @@ public class MappingProfile : Profile
             .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
         CreateMap<Models.BlogPost, BlogPostResponseDto>();
+    }
+
+    private void CreateGuestBookEntryMappings()
+    {
+        // GuestBookEntry 對映
+        CreateMap<CreateGuestBookEntryDto, GuestBookEntry>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.IpAddress, opt => opt.Ignore())
+            .ForMember(dest => dest.UserAgent, opt => opt.Ignore())
+            .ForMember(dest => dest.IsApproved, opt => opt.Ignore());
+
+        CreateMap<UpdateGuestBookEntryDto, GuestBookEntry>()
+            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+        CreateMap<GuestBookEntry, GuestBookEntryResponseDto>()
+            .ForMember(dest => dest.Replies, opt => opt.Ignore()) // 將在服務中手動填充
+            .ForMember(dest => dest.ReplyCount, opt => opt.Ignore()); // 將在服務中手動填充
+    }
+
+    private void CreateContactMethodMappings()
+    {
+        // ContactMethod 對映
+        CreateMap<CreateContactMethodDto, ContactMethod>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.User, opt => opt.Ignore());
+
+        CreateMap<UpdateContactMethodDto, ContactMethod>()
+            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+        CreateMap<ContactMethod, ContactMethodResponseDto>()
+            .ForMember(dest => dest.TypeName, opt => opt.MapFrom(src => src.Type.ToString()));
     }
 }

@@ -13,30 +13,90 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure Entity Framework (commented out for JSON data service)
-// var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-// builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+// Configure data access mode (Entity Framework or JSON fallback)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var useEntityFramework = !string.IsNullOrEmpty(connectionString) && 
+                         builder.Configuration.GetValue<bool>("UseEntityFramework", true);
 
-// Add JSON Data Service for development
+if (useEntityFramework && !string.IsNullOrEmpty(connectionString))
+{
+    // Configure Entity Framework with MariaDB
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    {
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mysqlOptions =>
+        {
+            mysqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorNumbersToAdd: null);
+        });
+        
+        // Enable sensitive data logging in development
+        if (builder.Environment.IsDevelopment())
+        {
+            options.EnableSensitiveDataLogging();
+            options.EnableDetailedErrors();
+        }
+    });
+}
+else
+{
+    // Configure fallback mode - use InMemory database for DI compatibility (requires Microsoft.EntityFrameworkCore.InMemory)
+    // For development without external database
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    {
+        // Use SQLite in-memory as fallback since InMemory provider may not be available
+        options.UseSqlite("Data Source=:memory:");
+    });
+}
+
+// Add JSON Data Service for development (fallback)
 builder.Services.AddScoped<JsonDataService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(PersonalManagerAPI.Mappings.MappingProfile));
 
-// Add Business Service Layer (starting with User service)
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserService, PersonalManagerAPI.Services.Implementation.UserService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPersonalProfileService, PersonalManagerAPI.Services.Implementation.PersonalProfileService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IEducationService, PersonalManagerAPI.Services.Implementation.EducationService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISkillService, PersonalManagerAPI.Services.Implementation.SkillService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkExperienceService, PersonalManagerAPI.Services.Implementation.WorkExperienceService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPortfolioService, PersonalManagerAPI.Services.Implementation.PortfolioService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICalendarEventService, PersonalManagerAPI.Services.Implementation.CalendarEventService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ITodoItemService, PersonalManagerAPI.Services.Implementation.TodoItemService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkTaskService, PersonalManagerAPI.Services.Implementation.WorkTaskService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IGuestBookService, PersonalManagerAPI.Services.Implementation.GuestBookService>();
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
+// Add Business Service Layer with dual mode support
+if (useEntityFramework && !string.IsNullOrEmpty(connectionString))
+{
+    // Entity Framework mode
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Implementation.UserServiceEF>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserService>(provider =>
+        provider.GetRequiredService<PersonalManagerAPI.Services.Implementation.UserServiceEF>());
+    
+    // TODO: Add other EF service implementations when available
+    // For now, use JSON services as fallback for other services
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPersonalProfileService, PersonalManagerAPI.Services.Implementation.PersonalProfileService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IEducationService, PersonalManagerAPI.Services.Implementation.EducationService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISkillService, PersonalManagerAPI.Services.Implementation.SkillService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkExperienceService, PersonalManagerAPI.Services.Implementation.WorkExperienceService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPortfolioService, PersonalManagerAPI.Services.Implementation.PortfolioService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICalendarEventService, PersonalManagerAPI.Services.Implementation.CalendarEventService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ITodoItemService, PersonalManagerAPI.Services.Implementation.TodoItemService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkTaskService, PersonalManagerAPI.Services.Implementation.WorkTaskService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IGuestBookService, PersonalManagerAPI.Services.Implementation.GuestBookService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
+}
+else
+{
+    // JSON Data Service mode (fallback)
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserService, PersonalManagerAPI.Services.Implementation.UserService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPersonalProfileService, PersonalManagerAPI.Services.Implementation.PersonalProfileService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IEducationService, PersonalManagerAPI.Services.Implementation.EducationService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISkillService, PersonalManagerAPI.Services.Implementation.SkillService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkExperienceService, PersonalManagerAPI.Services.Implementation.WorkExperienceService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPortfolioService, PersonalManagerAPI.Services.Implementation.PortfolioService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICalendarEventService, PersonalManagerAPI.Services.Implementation.CalendarEventService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ITodoItemService, PersonalManagerAPI.Services.Implementation.TodoItemService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IWorkTaskService, PersonalManagerAPI.Services.Implementation.WorkTaskService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IGuestBookService, PersonalManagerAPI.Services.Implementation.GuestBookService>();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
+}
+
+// Add Service Factory for dynamic service resolution
+builder.Services.AddScoped<PersonalManagerAPI.Services.ServiceFactory>();
 
 // Add File Services for media handling
 builder.Services.AddScoped<IFileService, FileService>();
@@ -46,6 +106,12 @@ builder.Services.AddScoped<IFileQuarantineService, FileQuarantineService>();
 // Add Authentication Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<PersonalManagerAPI.Services.Interfaces.ITokenBlacklistService, PersonalManagerAPI.Services.Implementation.TokenBlacklistService>();
+
+// Add Session Management Services
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserSessionService, PersonalManagerAPI.Services.Implementation.UserSessionService>();
+
+// Add RBAC (Role-Based Access Control) Services
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IRbacService, PersonalManagerAPI.Services.Implementation.RbacService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

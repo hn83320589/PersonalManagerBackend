@@ -14,6 +14,11 @@ namespace PersonalManagerAPI.Services
         Task<TokenResponseDto?> LoginAsync(LoginDto loginDto);
 
         /// <summary>
+        /// 使用者登入 (含設備資訊)
+        /// </summary>
+        Task<TokenResponseDto?> LoginAsync(LoginDto loginDto, DeviceInfoDto? deviceInfo = null, string? userAgent = null, string? ipAddress = null);
+
+        /// <summary>
         /// 使用者註冊
         /// </summary>
         Task<TokenResponseDto?> RegisterAsync(RegisterDto registerDto);
@@ -51,7 +56,7 @@ namespace PersonalManagerAPI.Services
         /// <summary>
         /// 產生存取令牌
         /// </summary>
-        string GenerateAccessToken(User user);
+        string GenerateAccessToken(User user, string? sessionId = null);
 
         /// <summary>
         /// 產生重新整理令牌

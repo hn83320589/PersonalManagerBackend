@@ -12,6 +12,7 @@ using PersonalManagerAPI.DTOs.WorkTask;
 using PersonalManagerAPI.DTOs.BlogPost;
 using PersonalManagerAPI.DTOs.GuestBookEntry;
 using PersonalManagerAPI.DTOs.ContactMethod;
+using PersonalManagerAPI.DTOs;
 
 namespace PersonalManagerAPI.Mappings;
 
@@ -31,6 +32,7 @@ public class MappingProfile : Profile
         CreateBlogPostMappings();
         CreateGuestBookEntryMappings();
         CreateContactMethodMappings();
+        CreateRbacMappings();
     }
 
     private void CreateUserMappings()
@@ -310,5 +312,51 @@ public class MappingProfile : Profile
 
         CreateMap<ContactMethod, ContactMethodResponseDto>()
             .ForMember(dest => dest.TypeName, opt => opt.MapFrom(src => src.Type.ToString()));
+    }
+
+    private void CreateRbacMappings()
+    {
+        // Role 對映
+        CreateMap<CreateRoleDto, Role>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.RolePermissions, opt => opt.Ignore())
+            .ForMember(dest => dest.UserRoles, opt => opt.Ignore());
+
+        CreateMap<UpdateRoleDto, Role>()
+            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+        CreateMap<Role, RoleResponseDto>()
+            .ForMember(dest => dest.PermissionCount, opt => opt.MapFrom(src => src.RolePermissions.Count))
+            .ForMember(dest => dest.UserCount, opt => opt.MapFrom(src => src.UserRoles.Count))
+            .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.RolePermissions.Select(rp => rp.Permission)));
+
+        // Permission 對映
+        CreateMap<CreatePermissionDto, Permission>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.RolePermissions, opt => opt.Ignore());
+
+        CreateMap<UpdatePermissionDto, Permission>()
+            .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+        CreateMap<Permission, PermissionResponseDto>();
+
+        // UserRole 對映
+        CreateMap<AssignUserRoleDto, UserRole>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.Role, opt => opt.Ignore());
+
+        CreateMap<UserRole, UserRoleResponseDto>()
+            .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.Name))
+            .ForMember(dest => dest.RoleDisplayName, opt => opt.MapFrom(src => src.Role.DisplayName))
+            .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.User.Username))
+            .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.UserFullName, opt => opt.MapFrom(src => src.User.FullName));
     }
 }

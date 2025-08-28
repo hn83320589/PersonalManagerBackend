@@ -1,0 +1,42 @@
+[
+  {
+    "Id": 1,
+    "UserId": 11,
+    "SessionId": "b927ba7b-2b52-420e-a728-98f52b5900f6",
+    "RefreshToken": "W9HMmsTKZkVgl8CADEeBF3tOHBjWrMQj7D1jiKtf4e4=",
+    "DeviceName": "Unknown Device",
+    "DeviceType": "Unknown",
+    "OperatingSystem": "Unknown",
+    "UserAgent": null,
+    "IpAddress": null,
+    "Location": null,
+    "CreatedAt": "2025-08-28T00:30:16.7844529Z",
+    "LastActiveAt": "2025-08-28T00:30:16.784464Z",
+    "ExpiresAt": "2025-09-04T00:30:16.7815246Z",
+    "IsActive": false,
+    "IsCurrent": false,
+    "EndedAt": "2025-08-28T00:31:10.1106605Z",
+    "EndReason": "LogoutOthers",
+    "User": null
+  },
+  {
+    "Id": 2,
+    "UserId": 11,
+    "SessionId": "bf67355e-e6c7-4a5f-904a-bdd820a54772",
+    "RefreshToken": "X\u002Bb\u002B5pg/f4\u002BZ3QHIUe2A/Q\u002BDFbesr30dfX4RGL2W15E=",
+    "DeviceName": "iPhone 13",
+    "DeviceType": "Mobile",
+    "OperatingSystem": "iOS 15.0",
+    "UserAgent": "iPhone/iOS 15.0 Safari/605.1",
+    "IpAddress": "::1",
+    "Location": "\u672C\u5730\u7DB2\u8DEF",
+    "CreatedAt": "2025-08-28T00:30:41.7637739Z",
+    "LastActiveAt": "2025-08-28T00:30:41.763774Z",
+    "ExpiresAt": "2025-09-04T00:30:41.7580919Z",
+    "IsActive": true,
+    "IsCurrent": true,
+    "EndedAt": null,
+    "EndReason": null,
+    "User": null
+  }
+]

@@ -18,19 +18,29 @@ namespace PersonalManagerAPI.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
         private readonly ITokenBlacklistService _tokenBlacklistService;
+        private readonly IUserSessionService _userSessionService;
 
-        public AuthService(JsonDataService dataService, IConfiguration configuration, ILogger<AuthService> logger, ITokenBlacklistService tokenBlacklistService)
+        public AuthService(JsonDataService dataService, IConfiguration configuration, ILogger<AuthService> logger, ITokenBlacklistService tokenBlacklistService, IUserSessionService userSessionService)
         {
             _dataService = dataService;
             _configuration = configuration;
             _logger = logger;
             _tokenBlacklistService = tokenBlacklistService;
+            _userSessionService = userSessionService;
         }
 
         /// <summary>
         /// 使用者登入
         /// </summary>
         public async Task<TokenResponseDto?> LoginAsync(LoginDto loginDto)
+        {
+            return await LoginAsync(loginDto, null, null, null);
+        }
+
+        /// <summary>
+        /// 使用者登入 (含設備資訊)
+        /// </summary>
+        public async Task<TokenResponseDto?> LoginAsync(LoginDto loginDto, DeviceInfoDto? deviceInfo = null, string? userAgent = null, string? ipAddress = null)
         {
             try
             {
@@ -55,16 +65,31 @@ namespace PersonalManagerAPI.Services
                 user.LastLoginDate = DateTime.UtcNow;
                 await _dataService.UpdateAsync(user);
 
-                // 產生令牌
-                var accessToken = GenerateAccessToken(user);
+                // 檢測可疑活動
+                var suspiciousCheck = await _userSessionService.DetectSuspiciousActivityAsync(user.Id, deviceInfo, ipAddress);
+                if (suspiciousCheck != null)
+                {
+                    _logger.LogWarning("檢測到可疑登入活動: {Username}, IP: {IpAddress}", user.Username, ipAddress);
+                }
+
+                // 強制執行設備數量限制
+                await _userSessionService.EnforceDeviceLimitAsync(user.Id, 5);
+
+                // 產生令牌和會話ID
+                var sessionId = Guid.NewGuid().ToString();
+                var accessToken = GenerateAccessToken(user, sessionId);
                 var refreshToken = GenerateRefreshToken();
 
-                // 儲存重新整理令牌 (實際應用中應存到資料庫)
+                // 儲存重新整理令牌
                 user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // 7天有效期
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
                 await _dataService.UpdateAsync(user);
 
-                _logger.LogInformation("使用者登入成功: {Username}", loginDto.Username);
+                // 創建用戶會話
+                var expiresAt = DateTime.UtcNow.AddDays(7); // 與 refresh token 同步
+                await _userSessionService.CreateSessionAsync(user.Id, sessionId, refreshToken, expiresAt, deviceInfo, userAgent, ipAddress);
+
+                _logger.LogInformation("使用者登入成功並創建會話: {Username}, SessionId: {SessionId}", user.Username, sessionId);
 
                 return new TokenResponseDto
                 {
@@ -164,8 +189,12 @@ namespace PersonalManagerAPI.Services
                     return null;
                 }
 
+                // 從現有的 session 中取得 sessionId
+                var existingSession = await _userSessionService.GetSessionByRefreshTokenAsync(refreshToken);
+                var sessionId = existingSession?.SessionId ?? Guid.NewGuid().ToString();
+
                 // 產生新的令牌
-                var accessToken = GenerateAccessToken(user);
+                var accessToken = GenerateAccessToken(user, sessionId);
                 var newRefreshToken = GenerateRefreshToken();
 
                 // 更新重新整理令牌
@@ -173,7 +202,13 @@ namespace PersonalManagerAPI.Services
                 user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
                 await _dataService.UpdateAsync(user);
 
-                _logger.LogInformation("令牌重新整理成功: {Username}", user.Username);
+                // 更新會話的最後活躍時間
+                if (existingSession != null)
+                {
+                    await _userSessionService.UpdateLastActiveAsync(sessionId);
+                }
+
+                _logger.LogInformation("令牌重新整理成功: {Username}, SessionId: {SessionId}", user.Username, sessionId);
 
                 return new TokenResponseDto
                 {
@@ -247,7 +282,7 @@ namespace PersonalManagerAPI.Services
         /// <summary>
         /// 產生存取令牌
         /// </summary>
-        public string GenerateAccessToken(User user)
+        public string GenerateAccessToken(User user, string? sessionId = null)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
@@ -256,6 +291,8 @@ namespace PersonalManagerAPI.Services
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var jti = sessionId ?? Guid.NewGuid().ToString();
 
             var claims = new[]
             {
@@ -266,7 +303,7 @@ namespace PersonalManagerAPI.Services
                 new Claim("userId", user.Id.ToString()),
                 new Claim("username", user.Username),
                 new Claim("fullName", user.FullName ?? ""),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti, jti), // 使用 sessionId 作為 JTI
                 new Claim(JwtRegisteredClaimNames.Iat, 
                     new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(), 
                     ClaimValueTypes.Integer64)
@@ -362,7 +399,26 @@ namespace PersonalManagerAPI.Services
         {
             try
             {
-                // 1. 撤銷 Refresh Token
+                string? sessionId = null;
+
+                // 從 Access Token 中提取 sessionId (JTI)
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    var handler = new JwtSecurityTokenHandler();
+                    if (handler.CanReadToken(accessToken))
+                    {
+                        var jwtToken = handler.ReadJwtToken(accessToken);
+                        sessionId = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                    }
+                }
+
+                // 1. 結束用戶會話
+                if (!string.IsNullOrEmpty(sessionId))
+                {
+                    await _userSessionService.EndSessionAsync(sessionId, "UserLogout");
+                }
+
+                // 2. 撤銷 Refresh Token
                 var users = await _dataService.GetAllAsync<User>();
                 var user = users.FirstOrDefault(u => u.Id == userId);
                 
@@ -373,13 +429,13 @@ namespace PersonalManagerAPI.Services
                     await _dataService.UpdateAsync(user);
                 }
 
-                // 2. 將 Access Token 加入黑名單
+                // 3. 將 Access Token 加入黑名單
                 if (!string.IsNullOrEmpty(accessToken))
                 {
                     await RevokeAccessTokenAsync(accessToken);
                 }
 
-                _logger.LogInformation("使用者登出成功: {UserId}", userId);
+                _logger.LogInformation("使用者登出成功: {UserId}, SessionId: {SessionId}", userId, sessionId);
                 return true;
             }
             catch (Exception ex)

@@ -25,7 +25,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 2,
@@ -53,7 +54,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 3,
@@ -81,7 +83,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 4,
@@ -109,7 +112,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 5,
@@ -137,7 +141,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 6,
@@ -165,7 +170,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 7,
@@ -193,7 +199,8 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
   },
   {
     "Id": 8,
@@ -221,6 +228,94 @@
     "WorkTasks": [],
     "TodoItems": [],
     "BlogPosts": [],
-    "ContactMethods": []
+    "ContactMethods": [],
+    "UserSessions": []
+  },
+  {
+    "Id": 9,
+    "Username": "sessiontest",
+    "Email": "session@example.com",
+    "PasswordHash": "$2a$11$/fe3mqTSFM.Xqua7kTQLeusNn/LpFOwRIQS20MXuBLDUiGA/nNkfK",
+    "FirstName": null,
+    "LastName": null,
+    "FullName": "Session Test",
+    "Phone": null,
+    "Role": "User",
+    "RefreshToken": "OWd6m9M/INd08XC\u002BzQ2OzMQlzaIwuqC5f1WCkJQj7LI=",
+    "RefreshTokenExpiryTime": "2025-09-04T00:28:43.9794132Z",
+    "LastLoginDate": "2025-08-28T00:28:43.9226108Z",
+    "CreatedDate": "2025-08-28T00:28:43.811502Z",
+    "IsActive": true,
+    "CreatedAt": "2025-08-28T00:28:43.7120272Z",
+    "UpdatedAt": "2025-08-28T00:28:43.7120272Z",
+    "PersonalProfile": null,
+    "Educations": [],
+    "WorkExperiences": [],
+    "Skills": [],
+    "Portfolios": [],
+    "CalendarEvents": [],
+    "WorkTasks": [],
+    "TodoItems": [],
+    "BlogPosts": [],
+    "ContactMethods": [],
+    "UserSessions": []
+  },
+  {
+    "Id": 10,
+    "Username": "multisession",
+    "Email": "multisession@example.com",
+    "PasswordHash": "$2a$11$3X1F8ZtVKUKE/.SYB56C/.KkDr.v85AUcEl2TjbF0r5MP8Tox/sgq",
+    "FirstName": null,
+    "LastName": null,
+    "FullName": "Multi Session User",
+    "Phone": null,
+    "Role": "User",
+    "RefreshToken": "h2/kBHuAWJDiMGPOX5OnVM3YKkKHHzYU7GkqWbWHaxw=",
+    "RefreshTokenExpiryTime": "2025-09-04T00:28:52.8293297Z",
+    "LastLoginDate": "2025-08-28T00:28:52.8220061Z",
+    "CreatedDate": "2025-08-28T00:28:52.7167693Z",
+    "IsActive": true,
+    "CreatedAt": "2025-08-28T00:28:52.6200387Z",
+    "UpdatedAt": "2025-08-28T00:28:52.6200387Z",
+    "PersonalProfile": null,
+    "Educations": [],
+    "WorkExperiences": [],
+    "Skills": [],
+    "Portfolios": [],
+    "CalendarEvents": [],
+    "WorkTasks": [],
+    "TodoItems": [],
+    "BlogPosts": [],
+    "ContactMethods": [],
+    "UserSessions": []
+  },
+  {
+    "Id": 11,
+    "Username": "devicetest",
+    "Email": "device@test.com",
+    "PasswordHash": "$2a$11$VKCOVKaoMtmdahQPjgtIrOsRmfyQXkHq0MXCVeO5T5dyFVayxqkCG",
+    "FirstName": null,
+    "LastName": null,
+    "FullName": "Device Test User",
+    "Phone": null,
+    "Role": "User",
+    "RefreshToken": "X\u002Bb\u002B5pg/f4\u002BZ3QHIUe2A/Q\u002BDFbesr30dfX4RGL2W15E=",
+    "RefreshTokenExpiryTime": "2025-09-04T00:30:41.7513148Z",
+    "LastLoginDate": "2025-08-28T00:30:41.7407158Z",
+    "CreatedDate": "2025-08-28T00:30:16.5548444Z",
+    "IsActive": true,
+    "CreatedAt": "2025-08-28T00:30:16.3279069Z",
+    "UpdatedAt": "2025-08-28T00:30:16.327907Z",
+    "PersonalProfile": null,
+    "Educations": [],
+    "WorkExperiences": [],
+    "Skills": [],
+    "Portfolios": [],
+    "CalendarEvents": [],
+    "WorkTasks": [],
+    "TodoItems": [],
+    "BlogPosts": [],
+    "ContactMethods": [],
+    "UserSessions": []
   }
 ]

@@ -77,4 +77,36 @@ public class User
     public ICollection<TodoItem> TodoItems { get; set; } = new List<TodoItem>();
     public ICollection<BlogPost> BlogPosts { get; set; } = new List<BlogPost>();
     public ICollection<ContactMethod> ContactMethods { get; set; } = new List<ContactMethod>();
+    public ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
+
+    // RBAC Navigation Properties
+    /// <summary>
+    /// 使用者角色對應
+    /// </summary>
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+
+    /// <summary>
+    /// 建立的角色 (作為建立者)
+    /// </summary>
+    public ICollection<Role> CreatedRoles { get; set; } = new List<Role>();
+
+    /// <summary>
+    /// 更新的角色 (作為更新者)
+    /// </summary>
+    public ICollection<Role> UpdatedRoles { get; set; } = new List<Role>();
+
+    /// <summary>
+    /// 分配的使用者角色 (作為分配者)
+    /// </summary>
+    public ICollection<UserRole> AssignedUserRoles { get; set; } = new List<UserRole>();
+
+    /// <summary>
+    /// 更新的使用者角色 (作為更新者)
+    /// </summary>
+    public ICollection<UserRole> UpdatedUserRoles { get; set; } = new List<UserRole>();
+
+    /// <summary>
+    /// 分配的角色權限 (作為分配者)
+    /// </summary>
+    public ICollection<RolePermission> AssignedRolePermissions { get; set; } = new List<RolePermission>();
 }

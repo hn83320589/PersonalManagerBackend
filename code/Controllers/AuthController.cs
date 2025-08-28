@@ -39,14 +39,57 @@ namespace PersonalManagerAPI.Controllers
                 return BadRequest(ApiResponse<TokenResponseDto>.Failure("資料驗證失敗", errors));
             }
 
-            var result = await _authService.LoginAsync(loginDto);
+            // 收集設備和連接資訊
+            var userAgent = Request.Headers["User-Agent"].FirstOrDefault();
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            
+            // 如果是 EnhancedLoginDto，則取得設備資訊
+            DeviceInfoDto? deviceInfo = null;
+            if (loginDto is EnhancedLoginDto enhancedLogin)
+            {
+                deviceInfo = enhancedLogin.DeviceInfo;
+            }
+
+            var result = await _authService.LoginAsync(loginDto, deviceInfo, userAgent, ipAddress);
             if (result == null)
             {
                 return Unauthorized(ApiResponse<TokenResponseDto>.Failure(
                     "登入失敗，請檢查使用者名稱和密碼"));
             }
 
-            _logger.LogInformation("使用者登入成功: {Username}", loginDto.Username);
+            _logger.LogInformation("使用者登入成功: {Username}, IP: {IpAddress}", loginDto.Username, ipAddress);
+            return Ok(ApiResponse<TokenResponseDto>.Success(result, "登入成功"));
+        }
+
+        /// <summary>
+        /// 增強登入 (含設備資訊)
+        /// </summary>
+        /// <param name="enhancedLoginDto">增強登入請求資料</param>
+        /// <returns>JWT令牌和使用者資訊</returns>
+        [HttpPost("enhanced-login")]
+        public async Task<ActionResult<ApiResponse<TokenResponseDto>>> EnhancedLogin([FromBody] EnhancedLoginDto enhancedLoginDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(ApiResponse<TokenResponseDto>.Failure("資料驗證失敗", errors));
+            }
+
+            var userAgent = Request.Headers["User-Agent"].FirstOrDefault();
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            var result = await _authService.LoginAsync(enhancedLoginDto, enhancedLoginDto.DeviceInfo, userAgent, ipAddress);
+            if (result == null)
+            {
+                return Unauthorized(ApiResponse<TokenResponseDto>.Failure(
+                    "登入失敗，請檢查使用者名稱和密碼"));
+            }
+
+            _logger.LogInformation("使用者增強登入成功: {Username}, Device: {DeviceName}, IP: {IpAddress}", 
+                enhancedLoginDto.Username, enhancedLoginDto.DeviceInfo?.DeviceName, ipAddress);
             return Ok(ApiResponse<TokenResponseDto>.Success(result, "登入成功"));
         }
 

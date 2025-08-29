@@ -45,8 +45,8 @@ else
     // For development without external database
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
-        // Use SQLite in-memory as fallback since InMemory provider may not be available
-        options.UseSqlite("Data Source=:memory:");
+        // Use InMemory database for DI compatibility when no external database is available
+        options.UseInMemoryDatabase("FallbackDatabase");
     });
 }
 
@@ -95,8 +95,7 @@ else
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
 }
 
-// Add Service Factory for dynamic service resolution
-builder.Services.AddScoped<PersonalManagerAPI.Services.ServiceFactory>();
+// Service Factory was removed as it was not being used
 
 // Add File Services for media handling
 builder.Services.AddScoped<IFileService, FileService>();
@@ -112,6 +111,12 @@ builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserSessionSe
 
 // Add RBAC (Role-Based Access Control) Services
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IRbacService, PersonalManagerAPI.Services.Implementation.RbacService>();
+
+// Add Security Services for API Protection (temporarily disabled for compilation)
+// builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISecurityService, PersonalManagerAPI.Services.Implementation.SecurityService>();
+
+// Add Background Services (temporarily disabled for compilation - missing ISecurityService dependency)
+// builder.Services.AddHostedService<PersonalManagerAPI.Services.Background.SecurityCleanupService>();
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -184,7 +189,8 @@ if (app.Environment.IsDevelopment())
 
 // Add custom middleware (order is important)
 app.UseErrorHandling(); // Must be first to catch all exceptions
-app.UseRequestLogging(); // Log requests after error handling
+app.UseRateLimiting(); // Rate limiting should be early in the pipeline
+app.UseRequestLogging(); // Log requests after error handling and rate limiting
 
 app.UseHttpsRedirection();
 

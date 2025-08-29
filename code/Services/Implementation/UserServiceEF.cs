@@ -122,7 +122,7 @@ public class UserServiceEF : IUserService
             // 加密密碼
             if (!string.IsNullOrEmpty(createUserDto.Password))
             {
-                user.PasswordHash = BCrypt.HashPassword(createUserDto.Password, 12);
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(createUserDto.Password, 12);
             }
 
             user.CreatedAt = DateTime.UtcNow;
@@ -245,7 +245,7 @@ public class UserServiceEF : IUserService
                 return false;
             }
 
-            return BCrypt.Verify(password, user.PasswordHash);
+            return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
         }
         catch (Exception ex)
         {
@@ -265,13 +265,13 @@ public class UserServiceEF : IUserService
             }
 
             // 驗證舊密碼
-            if (!BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash))
+            if (!BCrypt.Net.BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash))
             {
                 throw new UnauthorizedAccessException("Current password is incorrect");
             }
 
             // 設定新密碼
-            user.PasswordHash = BCrypt.HashPassword(changePasswordDto.NewPassword, 12);
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword, 12);
             user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -382,5 +382,93 @@ public class UserServiceEF : IUserService
             _logger.LogError(ex, "Error occurred while getting user statistics");
             throw;
         }
+    }
+
+    public async Task<bool> ValidatePasswordAsync(int id, string password)
+    {
+        try
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return false;
+            }
+
+            return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating password for user {UserId}", id);
+            throw;
+        }
+    }
+
+    public async Task<bool> IsUsernameExistAsync(string username, int? excludeId = null)
+    {
+        try
+        {
+            var query = _context.Users.Where(u => u.Username == username);
+            
+            if (excludeId.HasValue)
+            {
+                query = query.Where(u => u.Id != excludeId.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking username existence: {Username}", username);
+            throw;
+        }
+    }
+
+    public async Task<bool> IsEmailExistAsync(string email, int? excludeId = null)
+    {
+        try
+        {
+            var query = _context.Users.Where(u => u.Email == email);
+            
+            if (excludeId.HasValue)
+            {
+                query = query.Where(u => u.Id != excludeId.Value);
+            }
+
+            return await query.AnyAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking email existence: {Email}", email);
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateLastLoginAsync(int id)
+    {
+        try
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return false;
+            }
+
+            user.LastLoginDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Updated last login for user {UserId}", id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating last login for user {UserId}", id);
+            throw;
+        }
+    }
+
+    public async Task<object> GetUserStatsAsync()
+    {
+        // 重用現有的 GetUserStatisticsAsync 方法
+        return await GetUserStatisticsAsync();
     }
 }

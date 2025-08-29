@@ -24,5 +24,15 @@ namespace PersonalManagerAPI.Middleware
         {
             return builder.UseMiddleware<RequestLoggingMiddleware>();
         }
+
+        /// <summary>
+        /// 註冊 API 限流中介軟體
+        /// </summary>
+        /// <param name="builder">應用程式建構器</param>
+        /// <returns>應用程式建構器</returns>
+        public static IApplicationBuilder UseRateLimiting(this IApplicationBuilder builder)
+        {
+            return builder.UseMiddleware<SimpleRateLimitingMiddleware>();
+        }
     }
 }

@@ -64,8 +64,7 @@ if (useEntityFramework && !string.IsNullOrEmpty(connectionString))
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserService>(provider =>
         provider.GetRequiredService<PersonalManagerAPI.Services.Implementation.UserServiceEF>());
     
-    // TODO: Add other EF service implementations when available
-    // For now, use JSON services as fallback for other services
+    // All business services use JSON as fallback (EF implementations available for UserService)
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPersonalProfileService, PersonalManagerAPI.Services.Implementation.PersonalProfileService>();
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IEducationService, PersonalManagerAPI.Services.Implementation.EducationService>();
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISkillService, PersonalManagerAPI.Services.Implementation.SkillService>();

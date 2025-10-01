@@ -75,7 +75,7 @@ namespace PersonalManagerAPI.Services
         /// <summary>
         /// 從隔離區移除檔案
         /// </summary>
-        public async Task<bool> RemoveFromQuarantineAsync(string quarantineId)
+        public Task<bool> RemoveFromQuarantineAsync(string quarantineId)
         {
             try
             {
@@ -93,12 +93,12 @@ namespace PersonalManagerAPI.Services
                 }
 
                 _logger.LogInformation("File removed from quarantine: {QuarantineId}", quarantineId);
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to remove file from quarantine: {QuarantineId}", quarantineId);
-                return false;
+                return Task.FromResult(false);
             }
         }
 

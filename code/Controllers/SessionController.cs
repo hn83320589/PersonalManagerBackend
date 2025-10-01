@@ -84,7 +84,7 @@ public class SessionController : BaseController
         if (result)
         {
             _logger.LogInformation("用戶結束會話: UserId={UserId}, SessionId={SessionId}", userId, sessionId);
-            return Ok(ApiResponse<object>.Success(null, "會話已成功結束"));
+            return Ok(ApiResponse<object>.Success(null!, "會話已成功結束"));
         }
 
         return BadRequest(ApiResponse<object>.Failure("結束會話失敗"));
@@ -108,9 +108,9 @@ public class SessionController : BaseController
         var result = await _sessionService.EndOtherSessionsAsync(userId, currentSessionId, "LogoutOthers");
         if (result)
         {
-            _logger.LogInformation("用戶登出其他會話: UserId={UserId}, CurrentSession={CurrentSession}", 
+            _logger.LogInformation("用戶登出其他會話: UserId={UserId}, CurrentSession={CurrentSession}",
                 userId, currentSessionId);
-            return Ok(ApiResponse<object>.Success(null, "已成功登出所有其他設備"));
+            return Ok(ApiResponse<object>.Success(null!, "已成功登出所有其他設備"));
         }
 
         return BadRequest(ApiResponse<object>.Failure("登出其他會話失敗"));
@@ -133,7 +133,7 @@ public class SessionController : BaseController
         if (result)
         {
             _logger.LogInformation("用戶登出所有會話: UserId={UserId}", userId);
-            return Ok(ApiResponse<object>.Success(null, "已成功登出所有設備"));
+            return Ok(ApiResponse<object>.Success(null!, "已成功登出所有設備"));
         }
 
         return BadRequest(ApiResponse<object>.Failure("登出所有會話失敗"));
@@ -195,7 +195,7 @@ public class SessionController : BaseController
         var result = await _sessionService.UpdateLastActiveAsync(sessionId);
         if (result)
         {
-            return Ok(ApiResponse<object>.Success(null, "會話活躍時間已更新"));
+            return Ok(ApiResponse<object>.Success(null!, "會話活躍時間已更新"));
         }
 
         return BadRequest(ApiResponse<object>.Failure("更新會話失敗"));

@@ -598,7 +598,7 @@ public class UserSessionService : IUserSessionService
         return "Unknown";
     }
 
-    private static async Task<string> GetLocationFromIpAsync(string? ipAddress)
+    private static async Task<string?> GetLocationFromIpAsync(string? ipAddress)
     {
         // 簡化的位置檢測 - 實際應用中可整合第三方 IP 地理位置服務
         if (string.IsNullOrEmpty(ipAddress)) return null;

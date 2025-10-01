@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "Id": 1,
+    "Name": "Admin",
+    "DisplayName": "系統管理員",
+    "Description": "擁有系統所有權限的管理員角色",
+    "IsSystemRole": true,
+    "Priority": 1,
+    "IsActive": true,
+    "CreatedAt": "2025-01-01T00:00:00Z",
+    "UpdatedAt": "2025-01-01T00:00:00Z",
+    "CreatedById": null,
+    "UpdatedById": null
+  },
+  {
+    "Id": 2,
+    "Name": "User",
+    "DisplayName": "一般使用者",
+    "Description": "標準使用者角色，具有基本操作權限",
+    "IsSystemRole": true,
+    "Priority": 100,
+    "IsActive": true,
+    "CreatedAt": "2025-01-01T00:00:00Z",
+    "UpdatedAt": "2025-01-01T00:00:00Z",
+    "CreatedById": null,
+    "UpdatedById": null
+  },
+  {
+    "Id": 3,
+    "Name": "Guest",
+    "DisplayName": "訪客",
+    "Description": "訪客角色，僅能瀏覽公開內容",
+    "IsSystemRole": true,
+    "Priority": 999,
+    "IsActive": true,
+    "CreatedAt": "2025-01-01T00:00:00Z",
+    "UpdatedAt": "2025-01-01T00:00:00Z",
+    "CreatedById": null,
+    "UpdatedById": null
+  }
+]

@@ -97,11 +97,17 @@ public class TokenBlacklistService : ITokenBlacklistService
     /// <summary>
     /// 撤銷使用者的所有 Token (需要擴展以支援使用者 ID 追蹤)
     /// </summary>
+    /// <remarks>
+    /// 注意：此功能的完整實作需要持久化儲存（Redis 或資料庫）來追蹤 userId 與 jti 的對應關係。
+    /// 目前的記憶體快取版本無法有效實現跨會話的使用者級別撤銷。
+    /// 建議在整合 Redis 或資料庫時一併實作此功能，屆時需要：
+    /// 1. 在 AddToBlacklistAsync 中記錄 userId 與 jti 的關聯
+    /// 2. 在 RevokeAllUserTokensAsync 中查詢該 userId 的所有 Token 並全部撤銷
+    /// 3. 考慮實作 Token 撤銷事件通知機制（發布/訂閱模式）
+    /// </remarks>
     public Task RevokeAllUserTokensAsync(int userId)
     {
-        // TODO: 實作使用者級別的 Token 撤銷
-        // 需要在 AddToBlacklistAsync 中記錄 userId 關聯
-        _logger.LogInformation("撤銷使用者所有 Token: {UserId}", userId);
+        _logger.LogInformation("嘗試撤銷使用者所有 Token: {UserId} (功能待實作 - 需要 Redis/資料庫支援)", userId);
         return Task.CompletedTask;
     }
 

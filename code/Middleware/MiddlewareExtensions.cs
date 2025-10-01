@@ -34,15 +34,5 @@ namespace PersonalManagerAPI.Middleware
         {
             return builder.UseMiddleware<SimpleRateLimitingMiddleware>();
         }
-
-        /// <summary>
-        /// 註冊 RBAC 權限檢查中介軟體
-        /// </summary>
-        /// <param name="builder">應用程式建構器</param>
-        /// <returns>應用程式建構器</returns>
-        public static IApplicationBuilder UseRbacAuthorization(this IApplicationBuilder builder)
-        {
-            return builder.UseMiddleware<RbacAuthorizationMiddleware>();
-        }
     }
 }

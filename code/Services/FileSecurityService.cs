@@ -167,7 +167,7 @@ namespace PersonalManagerAPI.Services
         /// <summary>
         /// 檔案內容類型驗證
         /// </summary>
-        private async Task<bool> ValidateFileContentAsync(IFormFile file, FileSecurityResult result)
+        private Task<bool> ValidateFileContentAsync(IFormFile file, FileSecurityResult result)
         {
             // 檢查Content-Type是否與檔案副檔名匹配
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -179,10 +179,10 @@ namespace PersonalManagerAPI.Services
                 result.IsValid = false;
                 result.Errors.Add($"檔案內容類型 {contentType} 與副檔名 {extension} 不匹配");
                 _logger.LogWarning("Content-Type mismatch: {ContentType} for extension {Extension}", contentType, extension);
-                return false;
+                return Task.FromResult(false);
             }
 
-            return true;
+            return Task.FromResult(true);
         }
 
         /// <summary>

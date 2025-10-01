@@ -221,7 +221,7 @@ public class EducationService : IEducationService
             var educations = await _dataService.GetEducationsAsync();
             var searchResults = educations.Where(e =>
                 (!publicOnly || e.IsPublic) &&
-                e.Degree.Contains(degree, StringComparison.OrdinalIgnoreCase)
+                (e.Degree?.Contains(degree, StringComparison.OrdinalIgnoreCase) ?? false)
             ).OrderBy(e => e.SortOrder).ThenByDescending(e => e.StartDate);
             
             return _mapper.Map<IEnumerable<EducationResponseDto>>(searchResults);

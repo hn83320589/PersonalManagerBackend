@@ -165,7 +165,7 @@ namespace PersonalManagerAPI.Controllers
             }
 
             _logger.LogInformation("令牌撤銷成功");
-            return Ok(ApiResponse<object>.Success(null, "登出成功"));
+            return Ok(ApiResponse<object>.Success(null!, "登出成功"));
         }
 
         /// <summary>
@@ -193,7 +193,7 @@ namespace PersonalManagerAPI.Controllers
             }
 
             _logger.LogInformation("使用者完整登出成功: {UserId}", userId);
-            return Ok(ApiResponse<object>.Success(null, "完整登出成功"));
+            return Ok(ApiResponse<object>.Success(null!, "完整登出成功"));
         }
 
         /// <summary>

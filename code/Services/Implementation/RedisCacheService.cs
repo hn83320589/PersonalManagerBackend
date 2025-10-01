@@ -202,7 +202,7 @@ public class RedisCacheService : ICacheService
     /// <summary>
     /// 獲取快取統計資訊
     /// </summary>
-    public async Task<object> GetCacheStatsAsync()
+    public Task<object> GetCacheStatsAsync()
     {
         try
         {
@@ -216,12 +216,12 @@ public class RedisCacheService : ICacheService
                 DatabaseInfo = "Redis cache is connected and ready"
             };
 
-            return stats;
+            return Task.FromResult<object>(stats);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "獲取快取統計資訊時發生錯誤");
-            return new { Error = ex.Message };
+            return Task.FromResult<object>(new { Error = ex.Message });
         }
     }
 

@@ -214,16 +214,16 @@ public class FileService : IFileService
         return ApiResponse<FileUploadResponseDto>.ErrorResult("圖片縮放功能尚未實作，需要安裝 ImageSharp 套件");
     }
 
-    public async Task<bool> ValidateFileAsync(IFormFile file)
+    public Task<bool> ValidateFileAsync(IFormFile file)
     {
         if (file == null || file.Length == 0)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         if (file.Length > MaxFileSize)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -231,16 +231,16 @@ public class FileService : IFileService
         
         if (!allowedExtensions.Contains(extension))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         // 圖片檔案大小限制
         if (_allowedImageTypes.Contains(extension) && file.Length > MaxImageSize)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        return true;
+        return Task.FromResult(true);
     }
 
     public string GetFileUrl(string filePath)

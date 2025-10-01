@@ -100,6 +100,10 @@ else
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IDeviceSecurityService, PersonalManagerAPI.Services.Implementation.DeviceSecurityService>();
 }
 
+// Add RBAC Services
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+
 // Service Factory was removed as it was not being used
 
 // Add File Services for media handling
@@ -154,9 +158,6 @@ builder.Services.AddSingleton<PersonalManagerAPI.Services.Interfaces.ITokenBlack
 
 // Add Session Management Services
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserSessionService, PersonalManagerAPI.Services.Implementation.UserSessionService>();
-
-// Add RBAC (Role-Based Access Control) Services
-builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IRbacService, PersonalManagerAPI.Services.Implementation.RbacService>();
 
 // Add Security Enhancement Services
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPasswordSecurityService, PersonalManagerAPI.Services.Implementation.PasswordSecurityService>();
@@ -255,7 +256,6 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication(); // Must come before UseAuthorization
 app.UseMiddleware<PersonalManagerAPI.Middleware.JwtTokenValidationMiddleware>(); // JWT Token blacklist validation
 app.UseAuthorization();
-app.UseRbacAuthorization(); // RBAC Permission checking middleware
 
 app.MapControllers();
 

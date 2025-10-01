@@ -329,8 +329,7 @@ public class MappingProfile : Profile
 
         CreateMap<Role, RoleResponseDto>()
             .ForMember(dest => dest.PermissionCount, opt => opt.MapFrom(src => src.RolePermissions.Count))
-            .ForMember(dest => dest.UserCount, opt => opt.MapFrom(src => src.UserRoles.Count))
-            .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.RolePermissions.Select(rp => rp.Permission)));
+            .ForMember(dest => dest.UserCount, opt => opt.MapFrom(src => src.UserRoles.Count));
 
         // Permission 對映
         CreateMap<CreatePermissionDto, Permission>()
@@ -344,19 +343,6 @@ public class MappingProfile : Profile
 
         CreateMap<Permission, PermissionResponseDto>();
 
-        // UserRole 對映
-        CreateMap<AssignUserRoleDto, UserRole>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.User, opt => opt.Ignore())
-            .ForMember(dest => dest.Role, opt => opt.Ignore());
-
-        CreateMap<UserRole, UserRoleResponseDto>()
-            .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.Name))
-            .ForMember(dest => dest.RoleDisplayName, opt => opt.MapFrom(src => src.Role.DisplayName))
-            .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.User.Username))
-            .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email))
-            .ForMember(dest => dest.UserFullName, opt => opt.MapFrom(src => src.User.FullName));
+        // Note: UserRole mappings are handled by dedicated services when needed
     }
 }

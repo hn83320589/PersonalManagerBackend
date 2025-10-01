@@ -85,10 +85,10 @@ public class SecurityValidationMiddleware
             // 檢查自訂頭部
             foreach (var header in request.Headers)
             {
-                if (ContainsSuspiciousPatterns(header.Key) || 
-                    header.Value.Any(v => ContainsSuspiciousPatterns(v)))
+                if (ContainsSuspiciousPatterns(header.Key) ||
+                    header.Value.Any(v => !string.IsNullOrEmpty(v) && ContainsSuspiciousPatterns(v)))
                 {
-                    _logger.LogWarning("可疑的請求頭被攔截: {HeaderName}, IP: {ClientIP}", 
+                    _logger.LogWarning("可疑的請求頭被攔截: {HeaderName}, IP: {ClientIP}",
                         header.Key, GetClientIpAddress(request));
                     return ValidationResult.Invalid("檢測到可疑的請求頭");
                 }
@@ -130,10 +130,10 @@ public class SecurityValidationMiddleware
             // 檢查查詢參數
             foreach (var queryParam in request.Query)
             {
-                if (ContainsSuspiciousPatterns(queryParam.Key) || 
-                    queryParam.Value.Any(v => ContainsSuspiciousPatterns(v)))
+                if (ContainsSuspiciousPatterns(queryParam.Key) ||
+                    queryParam.Value.Any(v => !string.IsNullOrEmpty(v) && ContainsSuspiciousPatterns(v)))
                 {
-                    _logger.LogWarning("可疑的查詢參數被攔截: {ParamName}, IP: {ClientIP}", 
+                    _logger.LogWarning("可疑的查詢參數被攔截: {ParamName}, IP: {ClientIP}",
                         queryParam.Key, GetClientIpAddress(request));
                     return ValidationResult.Invalid("檢測到可疑的查詢參數");
                 }

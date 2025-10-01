@@ -34,5 +34,47 @@ namespace PersonalManagerAPI.Controllers
                 .Select(x => x.ErrorMessage)
                 .ToList();
         }
+
+        /// <summary>
+        /// 建立成功回應
+        /// </summary>
+        protected IActionResult CreateSuccessResponse<T>(T data, string message = "操作成功")
+        {
+            return Ok(ApiResponse<T>.Success(data, message));
+        }
+
+        /// <summary>
+        /// 建立錯誤回應
+        /// </summary>
+        protected IActionResult CreateErrorResponse(string message, List<string>? errors = null)
+        {
+            return BadRequest(ApiResponse<object>.Failure(message, errors));
+        }
+
+        /// <summary>
+        /// 建立錯誤回應（單一錯誤訊息）
+        /// </summary>
+        protected IActionResult CreateSingleErrorResponse(string message, string error)
+        {
+            return BadRequest(ApiResponse<object>.Failure(message, new List<string> { error }));
+        }
+
+        /// <summary>
+        /// 建立服務層結果回應
+        /// </summary>
+        protected IActionResult CreateResponse<T>(Services.ServiceResult<T> result)
+        {
+            return result.IsSuccess
+                ? Ok(ApiResponse<T>.Success(result.Data!, result.Message))
+                : BadRequest(ApiResponse<T>.Failure(result.Message, result.Errors));
+        }
+
+        /// <summary>
+        /// 獲取模型狀態錯誤
+        /// </summary>
+        protected List<string> GetModelStateErrors()
+        {
+            return GetModelErrors();
+        }
     }
 }

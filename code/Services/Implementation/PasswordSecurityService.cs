@@ -184,18 +184,18 @@ public class PasswordSecurityService : IPasswordSecurityService
     /// <summary>
     /// 檢查密碼是否已被洩露 (模擬 HaveIBeenPwned 檢查)
     /// </summary>
-    public async Task<bool> IsPasswordCompromisedAsync(string password)
+    public Task<bool> IsPasswordCompromisedAsync(string password)
     {
         try
         {
             // 這裡實現與 HaveIBeenPwned API 的集成
             // 為了演示，我們只檢查是否為常見密碼
-            return IsCommonPassword(password);
+            return Task.FromResult(IsCommonPassword(password));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "檢查密碼洩露狀態時發生錯誤");
-            return false; // 錯誤時假設密碼是安全的
+            return Task.FromResult(false); // 錯誤時假設密碼是安全的
         }
     }
 

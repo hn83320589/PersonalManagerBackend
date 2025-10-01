@@ -1,6 +1,11 @@
 # Personal Manager Backend
 
-這是Personal Manager系統的後端API專案，使用C# .NET Core Web API開發，具備企業級JWT認證、檔案安全驗證、統一錯誤處理等功能。
+一個現代化的個人展示與管理平台後端 API，使用 .NET 9.0 + Entity Framework Core + MariaDB 構建，具備企業級安全防護、完整的 CI/CD 管線、設備管理等高級功能。
+
+[![CI/CD Pipeline](https://github.com/hn83320589/PersonalManagerBackend/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/hn83320589/PersonalManagerBackend/actions/workflows/ci-cd.yml)
+[![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=personal-manager-backend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=personal-manager-backend)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=personal-manager-backend&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=personal-manager-backend)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=personal-manager-backend&metric=coverage)](https://sonarcloud.io/summary/new_code?id=personal-manager-backend)
 
 ## 🚀 快速開始
 

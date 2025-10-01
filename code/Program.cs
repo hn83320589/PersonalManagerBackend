@@ -76,6 +76,9 @@ if (useEntityFramework && !string.IsNullOrEmpty(connectionString))
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IGuestBookService, PersonalManagerAPI.Services.Implementation.GuestBookService>();
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
+    
+    // EF-based Device Security Service
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IDeviceSecurityService, PersonalManagerAPI.Services.Implementation.DeviceSecurityServiceEF>();
 }
 else
 {
@@ -92,6 +95,9 @@ else
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IBlogPostService, PersonalManagerAPI.Services.Implementation.BlogPostService>();
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IGuestBookService, PersonalManagerAPI.Services.Implementation.GuestBookService>();
     builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IContactMethodService, PersonalManagerAPI.Services.Implementation.ContactMethodService>();
+    
+    // JSON-based Device Security Service
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IDeviceSecurityService, PersonalManagerAPI.Services.Implementation.DeviceSecurityService>();
 }
 
 // Service Factory was removed as it was not being used
@@ -100,6 +106,47 @@ else
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IFileSecurityService, FileSecurityService>();
 builder.Services.AddScoped<IFileQuarantineService, FileQuarantineService>();
+
+// Configure Caching Services with Redis fallback to InMemory
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    try
+    {
+        // Try to configure Redis
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnectionString;
+            options.InstanceName = "PersonalManagerAPI";
+        });
+        
+        // Add Redis connection multiplexer
+        builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(provider =>
+        {
+            return StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString);
+        });
+        
+        // Register Redis cache service
+        builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICacheService, PersonalManagerAPI.Services.Implementation.RedisCacheService>();
+        
+        Console.WriteLine("Redis cache configured successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Redis configuration failed, falling back to in-memory cache: {ex.Message}");
+        
+        // Fallback to in-memory cache
+        builder.Services.AddMemoryCache();
+        builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICacheService, PersonalManagerAPI.Services.Implementation.InMemoryCacheService>();
+    }
+}
+else
+{
+    // No Redis connection string, use in-memory cache
+    builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ICacheService, PersonalManagerAPI.Services.Implementation.InMemoryCacheService>();
+    Console.WriteLine("In-memory cache configured (no Redis connection string)");
+}
 
 // Add Authentication Services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -110,6 +157,11 @@ builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IUserSessionSe
 
 // Add RBAC (Role-Based Access Control) Services
 builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IRbacService, PersonalManagerAPI.Services.Implementation.RbacService>();
+
+// Add Security Enhancement Services
+builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.IPasswordSecurityService, PersonalManagerAPI.Services.Implementation.PasswordSecurityService>();
+
+// Device Security Services are now configured in dual-mode above
 
 // Add Security Services for API Protection (temporarily disabled for compilation)
 // builder.Services.AddScoped<PersonalManagerAPI.Services.Interfaces.ISecurityService, PersonalManagerAPI.Services.Implementation.SecurityService>();
@@ -188,6 +240,7 @@ if (app.Environment.IsDevelopment())
 
 // Add custom middleware (order is important)
 app.UseErrorHandling(); // Must be first to catch all exceptions
+app.UseMiddleware<PersonalManagerAPI.Middleware.SecurityValidationMiddleware>(); // Security validation should be early
 app.UseRateLimiting(); // Rate limiting should be early in the pipeline
 app.UseRequestLogging(); // Log requests after error handling and rate limiting
 
@@ -202,6 +255,7 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication(); // Must come before UseAuthorization
 app.UseMiddleware<PersonalManagerAPI.Middleware.JwtTokenValidationMiddleware>(); // JWT Token blacklist validation
 app.UseAuthorization();
+app.UseRbacAuthorization(); // RBAC Permission checking middleware
 
 app.MapControllers();
 

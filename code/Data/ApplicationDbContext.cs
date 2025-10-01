@@ -33,6 +33,10 @@ namespace PersonalManagerAPI.Data
         // User Session Management
         public DbSet<UserSession> UserSessions { get; set; }
 
+        // Device Security Management
+        public DbSet<TrustedDevice> TrustedDevices { get; set; }
+        public DbSet<SecurityActivityLog> SecurityActivityLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -51,6 +55,7 @@ namespace PersonalManagerAPI.Data
             ConfigureContactMethodEntity(modelBuilder);
             ConfigureRbacEntities(modelBuilder);
             ConfigureUserSessionEntity(modelBuilder);
+            ConfigureDeviceSecurityEntities(modelBuilder);
         }
 
         private void ConfigureUserEntity(ModelBuilder modelBuilder)
@@ -70,6 +75,22 @@ namespace PersonalManagerAPI.Data
                 entity.Property(e => e.RefreshToken).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                
+                // Configure RBAC navigation properties to avoid conflicts
+                entity.HasMany(e => e.CreatedRoles)
+                      .WithOne(e => e.CreatedBy)
+                      .HasForeignKey(e => e.CreatedById)
+                      .OnDelete(DeleteBehavior.SetNull);
+                      
+                entity.HasMany(e => e.UpdatedRoles)
+                      .WithOne(e => e.UpdatedBy)
+                      .HasForeignKey(e => e.UpdatedById)
+                      .OnDelete(DeleteBehavior.SetNull);
+                      
+                // Ignore complex navigation properties that cause conflicts
+                entity.Ignore(e => e.AssignedUserRoles);
+                entity.Ignore(e => e.UpdatedUserRoles);
+                entity.Ignore(e => e.AssignedRolePermissions);
             });
         }
 
@@ -305,6 +326,17 @@ namespace PersonalManagerAPI.Data
                 entity.Property(e => e.Description).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                
+                // Configure navigation properties with proper relationships
+                entity.HasOne(e => e.CreatedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.CreatedById)
+                      .OnDelete(DeleteBehavior.SetNull);
+                      
+                entity.HasOne(e => e.UpdatedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.UpdatedById)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
 
             // Permission Configuration
@@ -340,6 +372,17 @@ namespace PersonalManagerAPI.Data
                       .WithMany(e => e.UserRoles)
                       .HasForeignKey(e => e.RoleId)
                       .OnDelete(DeleteBehavior.Cascade);
+                      
+                // Configure AssignedBy and UpdatedBy relationships
+                entity.HasOne(e => e.AssignedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.AssignedById)
+                      .OnDelete(DeleteBehavior.SetNull);
+                      
+                entity.HasOne(e => e.UpdatedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.UpdatedById)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
 
             // RolePermission Configuration
@@ -359,6 +402,12 @@ namespace PersonalManagerAPI.Data
                       .WithMany(e => e.RolePermissions)
                       .HasForeignKey(e => e.PermissionId)
                       .OnDelete(DeleteBehavior.Cascade);
+                      
+                // Configure CreatedBy relationship
+                entity.HasOne(e => e.CreatedBy)
+                      .WithMany()
+                      .HasForeignKey(e => e.CreatedById)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
         }
 
@@ -372,6 +421,53 @@ namespace PersonalManagerAPI.Data
                 entity.Property(e => e.IpAddress).HasMaxLength(45);
                 entity.Property(e => e.UserAgent).HasMaxLength(1000);
                 entity.Property(e => e.RefreshToken).HasMaxLength(500);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigureDeviceSecurityEntities(ModelBuilder modelBuilder)
+        {
+            // TrustedDevice Configuration
+            modelBuilder.Entity<TrustedDevice>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.UserId, e.DeviceFingerprint }).IsUnique();
+                entity.Property(e => e.DeviceFingerprint).HasMaxLength(255).IsRequired();
+                entity.Property(e => e.DeviceName).HasMaxLength(200);
+                entity.Property(e => e.DeviceType).HasMaxLength(50);
+                entity.Property(e => e.OperatingSystem).HasMaxLength(200);
+                entity.Property(e => e.Browser).HasMaxLength(200);
+                entity.Property(e => e.IpAddress).HasMaxLength(45);
+                entity.Property(e => e.Location).HasMaxLength(200);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // SecurityActivityLog Configuration
+            modelBuilder.Entity<SecurityActivityLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.ActivityType);
+                entity.HasIndex(e => e.ActivityAt);
+                entity.HasIndex(e => e.IsSuspicious);
+                entity.Property(e => e.ActivityType).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.DeviceFingerprint).HasMaxLength(255);
+                entity.Property(e => e.IpAddress).HasMaxLength(45);
+                entity.Property(e => e.Location).HasMaxLength(200);
+                entity.Property(e => e.UserAgent).HasMaxLength(1000);
+                entity.Property(e => e.RiskLevel).HasMaxLength(20);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 
                 entity.HasOne(e => e.User)

@@ -1,0 +1,25 @@
+name: "Personal Manager Backend CodeQL Config"
+
+disable-default-queries: false
+
+queries:
+  - name: security-and-quality
+    uses: security-and-quality
+  - name: security-extended
+    uses: security-extended
+
+paths:
+  - code
+  
+paths-ignore:
+  - code/bin
+  - code/obj
+  - code/wwwroot
+  - code/Data/JsonData
+  - "**/*.Tests/**"
+  - "**/*.IntegrationTests/**"
+
+# Additional packs for enhanced security scanning
+packs:
+  - codeql/csharp-queries
+  - codeql/csharp-security-queries

@@ -1,0 +1,24 @@
+[
+  {
+    "Id": 1,
+    "Username": "admin",
+    "Email": "admin@example.com",
+    "PasswordHash": "$2a$11$nD1MvQYCWqpwfcxs5tQZveyRbmS8ZCCgeEDPUbxor9DO9AuBtp3Ya",
+    "FullName": "\u7CFB\u7D71\u7BA1\u7406\u54E1",
+    "Role": "Admin",
+    "IsActive": true,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 2,
+    "Username": "testuser",
+    "Email": "testuser@example.com",
+    "PasswordHash": "$2a$11$nD1MvQYCWqpwfcxs5tQZveyRbmS8ZCCgeEDPUbxor9DO9AuBtp3Ya",
+    "FullName": "\u6E2C\u8A66\u4F7F\u7528\u8005",
+    "Role": "User",
+    "IsActive": true,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  }
+]

@@ -1317,16 +1317,18 @@ GET /api/personalprofiles - 200 OK
 - [ ] API版本控制準備
         _為未來API版本升級做準備，DTOs版本管理_
 
-#### 高級安全性功能
+#### 高級安全性功能 ✅ (100% 完成)
 - [x] JWT Token刷新機制 ✅
         _已完成：Refresh Token、Token自動續期、Token黑名單管理、智慧刷新邏輯_
         _包含：ITokenBlacklistService、JwtTokenValidationMiddleware、自動續期API端點_
-- [ ] 角色權限系統 (RBAC)
-        _Role-Based Access Control、細粒度權限控制、權限繼承_
+- [x] 角色權限系統 (RBAC) ✅
+        _已完成：Role-Based Access Control、細粒度權限控制、RolesController + PermissionsController_
+        _包含：IRoleService、IPermissionService、3預設角色、17系統權限、完整前後端整合_
 - [x] API限流與防護 ✅
         _已完成：SimpleRateLimitingMiddleware、IP封鎖機制、記憶體最佳化、企業級DDoS防護_
-- [ ] 輸入驗證強化
-        _防SQL注入、XSS防護、資料清理、安全標頭_
+- [x] 輸入驗證強化 ✅
+        _已完成：DTO層級驗證、Model驗證屬性、ErrorHandlingMiddleware、統一錯誤處理_
+        _包含：ValidationException、防SQL注入、XSS防護、CORS安全策略_
 
 ### Phase 2.2: 資料層優化與快取 (優先級: 中高)
 

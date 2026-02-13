@@ -1,0 +1,34 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "Title": "如何設計可擴展的資料庫架構",
+    "Content": "# 如何設計可擴展的資料庫架構\n\n在現代應用程式開發中，資料庫設計是非常重要的一環。一個好的資料庫架構不僅能提供高效的查詢效能，更重要的是要具備良好的可擴展性，能夠隨著業務成長而彈性調整。\n\n## 設計原則\n\n### 1. 正規化與反正規化的平衡\n適當的正規化可以減少資料冗餘，但過度正規化可能影響查詢效能。在設計時需要根據實際使用場景來決定正規化的程度。\n\n### 2. 索引策略\n建立適當的索引是提升查詢效能的關鍵。需要考慮:\n- 常用查詢條件\n- 複合索引的欄位順序\n- 索引維護成本\n\n### 3. 分割策略\n當資料量增長到一定程度時，需要考慮水平分割或垂直分割:\n- 水平分割：依據某個條件將記錄分散到不同資料表\n- 垂直分割：將不常用的欄位分離到獨立資料表\n\n## 實作建議\n\n### 軟刪除\n對於重要資料，建議使用軟刪除而非實際刪除，可以保留資料的完整性並支援資料復原。\n\n### 審計追蹤\n建立完整的審計機制，記錄資料的建立、修改、刪除等操作，有助於問題追蹤與合規要求。\n\n### 備份策略\n制定完善的備份與復原策略，包含定期備份、災難復原演練等。\n\n## 總結\n\n資料庫架構設計需要綜合考慮效能、可維護性、可擴展性等多個面向。透過適當的設計原則與實作策略，可以建立一個穩定且具備成長潜力的資料庫系統。",
+    "Summary": "分享資料庫架構設計的經驗與最佳實踐，包含正規化策略、索引設計、分割方法等核心概念。",
+    "IsPublished": true,
+    "IsPublic": true,
+    "PublishedDate": "2025-08-10T10:00:00Z",
+    "FeaturedImageUrl": "https://example.com/images/database-design.jpg",
+    "Tags": "資料庫,架構設計,.NET Core,效能優化",
+    "Category": "技術分享",
+    "ViewCount": 156,
+    "CreatedAt": "2025-08-09T14:00:00Z",
+    "UpdatedAt": "2025-08-10T10:00:00Z"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "Title": "Vue.js 3 與 TypeScript 開發心得",
+    "Content": "# Vue.js 3 與 TypeScript 開發心得\n\nVue.js 3 結合 TypeScript 可以大幅提升開發效率與程式碼品質。在這篇文章中，我想分享一些實際開發經驗與最佳實踐。\n\n## Composition API 的優勢\n\nVue 3 的 Composition API 相較於 Options API 有以下優點：\n- 更好的 TypeScript 支援\n- 邏輯復用更加靈活\n- 大型組件的可維護性提升\n\n```typescript\n<script setup lang=\"ts\">\nimport { ref, computed, onMounted } from 'vue'\n\ninterface User {\n  id: number\n  name: string\n  email: string\n}\n\nconst users = ref<User[]>([])\nconst selectedUser = ref<User | null>(null)\n\nconst displayName = computed(() => {\n  return selectedUser.value?.name ?? '未選擇使用者'\n})\n\nonMounted(async () => {\n  users.value = await fetchUsers()\n})\n</script>\n```\n\n## 狀態管理：Pinia\n\nPinia 是 Vue 3 推薦的狀態管理方案，相較於 Vuex 有更好的 TypeScript 支援：\n\n```typescript\nimport { defineStore } from 'pinia'\n\nexport const useUserStore = defineStore('user', {\n  state: () => ({\n    users: [] as User[],\n    currentUser: null as User | null\n  }),\n  \n  getters: {\n    userCount: (state) => state.users.length,\n    isLoggedIn: (state) => state.currentUser !== null\n  },\n  \n  actions: {\n    async fetchUsers() {\n      this.users = await api.getUsers()\n    }\n  }\n})\n```\n\n## 開發工具推薦\n\n- **Volar**: VS Code 的 Vue 3 語言服務擴展\n- **Vue DevTools**: 瀏覽器除錯工具\n- **TypeScript**: 強型別檢查\n- **ESLint + Prettier**: 程式碼品質控制\n\n## 總結\n\nVue 3 + TypeScript 的組合提供了現代化的前端開發體驗。透過適當的工具鏈與最佳實踐，可以建立出高品質、易維護的前端應用程式。",
+    "Summary": "分享 Vue3 + TypeScript 的開發經驗，包含 Composition API、Pinia 狀態管理、開發工具等實用內容。",
+    "IsPublished": false,
+    "IsPublic": false,
+    "PublishedDate": null,
+    "FeaturedImageUrl": "https://example.com/images/vue-typescript.jpg",
+    "Tags": "Vue.js,TypeScript,前端,Composition API,Pinia",
+    "Category": "前端開發",
+    "ViewCount": 0,
+    "CreatedAt": "2025-08-11T16:30:00Z",
+    "UpdatedAt": "2025-08-11T18:45:00Z"
+  }
+]

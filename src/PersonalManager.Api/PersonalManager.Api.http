@@ -1,0 +1,6 @@
+@PersonalManager.Api_HostAddress = http://localhost:5037
+
+GET {{PersonalManager.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

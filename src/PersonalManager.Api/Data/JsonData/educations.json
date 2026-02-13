@@ -1,0 +1,30 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "School": "國立台灣大學",
+    "Degree": "碩士",
+    "FieldOfStudy": "資訊工程學系",
+    "StartYear": 2015,
+    "EndYear": 2017,
+    "Description": "主修軟體工程與資料庫系統，研究領域包含分散式系統架構、資料庫效能優化、機器學習應用等。",
+    "IsPublic": true,
+    "SortOrder": 1,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "School": "國立交通大學",
+    "Degree": "學士",
+    "FieldOfStudy": "資訊工程學系",
+    "StartYear": 2011,
+    "EndYear": 2015,
+    "Description": "主修程式設計與演算法，專精於資料結構、演算法設計與分析、作業系統、計算機網路等核心課程。",
+    "IsPublic": true,
+    "SortOrder": 2,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  }
+]

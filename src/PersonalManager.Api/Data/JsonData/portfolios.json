@@ -1,0 +1,53 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "Title": "Personal Manager 系統",
+    "Description": "個人服務管理系統，整合履歷展示、待辦事項管理、行事曆功能、工作追蹤等多元化功能。系統採用前後端分離架構，提供RESTful API服務與現代化前端介面。支援響應式設計，可在各種裝置上良好運作。",
+    "TechnologyUsed": ".NET Core 8, Vue.js 3, TypeScript, MariaDB, Entity Framework Core, Vite, Pinia",
+    "ProjectUrl": "https://personalmanager.example.com",
+    "GithubUrl": "https://github.com/example/personal-manager",
+    "ImageUrl": "https://example.com/images/personal-manager.png",
+    "StartDate": "2025-08-01T00:00:00Z",
+    "EndDate": null,
+    "IsPublic": true,
+    "IsFeatured": true,
+    "SortOrder": 1,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "Title": "E-Commerce API 系統",
+    "Description": "高效能電商平台後端API系統，支援商品管理、訂單處理、會員系統、支付整合等核心功能。系統採用微服務架構設計，具備高可用性與可擴展性。整合多家第三方服務，包含支付閘道、物流API、簡訊通知等。",
+    "TechnologyUsed": ".NET Core 6, Entity Framework Core, Redis, RabbitMQ, SQL Server, Docker",
+    "ProjectUrl": null,
+    "GithubUrl": "https://github.com/example/ecommerce-api",
+    "ImageUrl": "https://example.com/images/ecommerce-api.png",
+    "StartDate": "2024-01-01T00:00:00Z",
+    "EndDate": "2024-06-30T00:00:00Z",
+    "IsPublic": true,
+    "IsFeatured": false,
+    "SortOrder": 2,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 3,
+    "UserId": 1,
+    "Title": "庫存管理系統",
+    "Description": "中小企業庫存管理解決方案，提供商品入庫、出庫、盤點、報表等完整功能。系統具備多倉庫管理、批號追蹤、庫存預警等進階功能。採用現代化網頁技術開發，支援多使用者同時操作。",
+    "TechnologyUsed": "ASP.NET Core MVC, Bootstrap, jQuery, MySQL, Chart.js",
+    "ProjectUrl": "https://inventory.example.com",
+    "GithubUrl": "https://github.com/example/inventory-system",
+    "ImageUrl": "https://example.com/images/inventory-system.png",
+    "StartDate": "2023-06-01T00:00:00Z",
+    "EndDate": "2023-12-31T00:00:00Z",
+    "IsPublic": true,
+    "IsFeatured": false,
+    "SortOrder": 3,
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  }
+]

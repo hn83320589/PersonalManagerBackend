@@ -1,0 +1,41 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "Title": "專案會議",
+    "Description": "討論 Personal Manager 系統需求規格與技術架構設計。",
+    "StartTime": "2025-08-15T10:00:00Z",
+    "EndTime": "2025-08-15T11:30:00Z",
+    "IsAllDay": false,
+    "IsPublic": false,
+    "Color": "#3B82F6",
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 2,
+    "UserId": 1,
+    "Title": "技術研討會",
+    "Description": "參加 .NET Conf 2025 技術研討會。",
+    "StartTime": "2025-09-01T09:00:00Z",
+    "EndTime": "2025-09-01T17:00:00Z",
+    "IsAllDay": true,
+    "IsPublic": true,
+    "Color": "#10B981",
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  },
+  {
+    "Id": 3,
+    "UserId": 1,
+    "Title": "程式碼審查",
+    "Description": "審查團隊成員提交的程式碼。",
+    "StartTime": "2025-08-14T14:00:00Z",
+    "EndTime": "2025-08-14T15:00:00Z",
+    "IsAllDay": false,
+    "IsPublic": false,
+    "Color": "#F59E0B",
+    "CreatedAt": "2025-08-12T09:00:00Z",
+    "UpdatedAt": "2025-08-12T09:00:00Z"
+  }
+]

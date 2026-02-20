@@ -172,51 +172,29 @@ When multiple valid approaches exist, choose based on:
 
 ## 專案結構
 
-此專案採用 **分離配置架構**，將 Docker 配置與原始碼分開管理：
-
 ```
 PersonalManagerBackend/
-├── docker/                    # Docker 配置目錄
-│   ├── Dockerfile            # Docker 映像建置檔
-│   ├── docker-compose.yml    # 服務編排檔
-│   ├── zeabur.yml            # Zeabur 部署配置
-│   ├── .dockerignore         # Docker 忽略檔
-│   └── README.md             # Docker 使用說明
-└── code/                     # 原始碼目錄
-    ├── Controllers/          # API控制器
-    │   ├── BaseController.cs # 控制器基礎類別
-    │   ├── AuthController.cs # 身份驗證控制器
-    │   └── ...               # 其他13個API控制器
-    ├── Models/               # 資料模型 (12個模型類別)
-    ├── Services/             # 業務邏輯服務
-    │   ├── JsonDataService.cs        # JSON 資料存取服務
-    │   ├── AuthService.cs            # 身份驗證服務
-    │   ├── FileService.cs            # 檔案上傳服務
-    │   ├── FileSecurityService.cs    # 檔案安全驗證服務
-    │   └── FileQuarantineService.cs  # 檔案隔離服務
-    ├── Data/                 # 資料存取層
-    │   ├── ApplicationDbContext.cs   # EF Core 資料庫上下文
-    │   └── JsonData/                 # JSON 模擬資料檔案
-    ├── DTOs/                 # 資料傳輸物件
-    │   ├── ApiResponse.cs            # 統一API回應格式
-    │   ├── LoginDto.cs               # 登入請求DTO
-    │   └── FileUploadDto.cs          # 檔案上傳DTO
-    ├── Middleware/           # 中介軟體
-    │   ├── ErrorHandlingMiddleware.cs    # 統一錯誤處理
-    │   ├── RequestLoggingMiddleware.cs   # 請求日誌記錄
-    │   ├── MiddlewareExtensions.cs       # 中介軟體擴展
-    │   └── Exceptions/                   # 自訂例外類別
-    │       ├── BusinessLogicException.cs
-    │       ├── ValidationException.cs
-    │       └── ResourceNotFoundException.cs
-    ├── Configuration/        # 設定相關
-    ├── DB/                  # 資料庫設計檔案
-    ├── Properties/          # 專案屬性
-    ├── wwwroot/             # 靜態資源與檔案上傳
-    ├── PersonalManagerAPI.csproj  # 專案檔案
-    ├── Program.cs           # 程式進入點
-    ├── appsettings.json     # 應用程式設定
-    └── README.md            # 原始碼說明文件
+├── PersonalManager.Api.csproj    # 專案檔案
+├── PersonalManager.sln           # 解決方案檔案
+├── Program.cs                    # 程式進入點
+├── appsettings.json              # 應用程式設定
+├── appsettings.Development.json  # 開發環境設定
+├── Auth/                         # 認證相關
+├── Controllers/                  # API控制器
+├── DTOs/                         # 資料傳輸物件
+├── Data/                         # 資料存取層
+│   └── JsonData/                 # JSON 模擬資料檔案
+├── Mappings/                     # AutoMapper 配置
+├── Middleware/                   # 中介軟體
+├── Models/                       # 資料模型
+├── Properties/                   # 專案屬性
+├── Repositories/                 # 資料存取層
+├── Services/                     # 業務邏輯服務
+├── sql/                          # 資料庫設計檔案
+├── tests/                        # 測試專案
+│   └── PersonalManager.Api.Tests/
+├── CLAUDE.md
+└── README.md
 ```
 
 ## 開發規範
@@ -372,10 +350,7 @@ PersonalManagerBackend/
 - [x] 設定測試資料庫 - 使用 JSON 檔案模擬資料
 
 ### 部署準備
-- [x] 設定 Docker 容器化 - 完整Docker配置與Zeabur部署支援
 - [x] 準備 Production 環境設定 - 環境變數、外部DB整合
-- [x] 建立分離配置架構 - Docker配置與原始碼分離管理
-- [x] Zeabur平台整合 - zeabur.yml配置與自動部署
 - [x] 撰寫 API 文件 - 完成詳細API文檔、快速參考手冊、Postman Collection
 - [ ] 建立 CI/CD 管線設定
 
@@ -383,17 +358,14 @@ PersonalManagerBackend/
 
 ### 開發環境
 ```bash
-# 進入原始碼目錄
-cd code
-
 # 建置專案
-dotnet build
+dotnet build PersonalManager.sln
 
 # 執行專案 (開發環境)
 dotnet run
 
 # 執行測試
-dotnet test
+dotnet test PersonalManager.sln
 
 # 新增套件
 dotnet add package PackageName
@@ -402,32 +374,8 @@ dotnet add package PackageName
 dotnet restore
 ```
 
-### Docker 操作
-```bash
-# 進入 Docker 配置目錄
-cd docker
-
-# 建置 Docker 映像
-docker build -t personalmanager-backend -f Dockerfile ..
-
-# 啟動服務 (僅 API)
-docker-compose up personalmanager-api
-
-# 啟動完整服務 (API + 資料庫 + Redis)
-docker-compose --profile database --profile cache up
-
-# 背景執行
-docker-compose up -d
-
-# 停止服務
-docker-compose down
-```
-
 ### Entity Framework
 ```bash
-# 進入原始碼目錄
-cd code
-
 # 建立 Migration
 dotnet ef migrations add InitialCreate
 

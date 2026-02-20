@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\PersonalManager.Api\PersonalManager.Api.csproj" />
+    <ProjectReference Include="..\..\PersonalManager.Api.csproj" />
   </ItemGroup>
 
 </Project>

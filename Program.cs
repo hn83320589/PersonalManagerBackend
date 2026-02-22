@@ -75,24 +75,61 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Database
+// --- Database connectivity probe ---
+// Try to detect server version (which opens a real connection).
+// If this fails, fall back to local JSON files so development can continue.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+bool useDatabase = false;
+ServerVersion? serverVersion = null;
 
-// Repositories (EF Core)
-builder.Services.AddScoped<IRepository<User>, EfRepository<User>>();
-builder.Services.AddScoped<IRepository<PersonalProfile>, EfRepository<PersonalProfile>>();
-builder.Services.AddScoped<IRepository<Education>, EfRepository<Education>>();
-builder.Services.AddScoped<IRepository<WorkExperience>, EfRepository<WorkExperience>>();
-builder.Services.AddScoped<IRepository<Skill>, EfRepository<Skill>>();
-builder.Services.AddScoped<IRepository<Portfolio>, EfRepository<Portfolio>>();
-builder.Services.AddScoped<IRepository<CalendarEvent>, EfRepository<CalendarEvent>>();
-builder.Services.AddScoped<IRepository<TodoItem>, EfRepository<TodoItem>>();
-builder.Services.AddScoped<IRepository<WorkTask>, EfRepository<WorkTask>>();
-builder.Services.AddScoped<IRepository<BlogPost>, EfRepository<BlogPost>>();
-builder.Services.AddScoped<IRepository<GuestBookEntry>, EfRepository<GuestBookEntry>>();
-builder.Services.AddScoped<IRepository<ContactMethod>, EfRepository<ContactMethod>>();
+if (!string.IsNullOrEmpty(connectionString))
+{
+    try
+    {
+        serverVersion = ServerVersion.AutoDetect(connectionString);
+        useDatabase = true;
+    }
+    catch
+    {
+        // DB unreachable — will use JSON fallback
+    }
+}
+
+if (useDatabase)
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseMySql(connectionString!, serverVersion!));
+
+    // Repositories — EF Core (read/write to database)
+    builder.Services.AddScoped<IRepository<User>, EfRepository<User>>();
+    builder.Services.AddScoped<IRepository<PersonalProfile>, EfRepository<PersonalProfile>>();
+    builder.Services.AddScoped<IRepository<Education>, EfRepository<Education>>();
+    builder.Services.AddScoped<IRepository<WorkExperience>, EfRepository<WorkExperience>>();
+    builder.Services.AddScoped<IRepository<Skill>, EfRepository<Skill>>();
+    builder.Services.AddScoped<IRepository<Portfolio>, EfRepository<Portfolio>>();
+    builder.Services.AddScoped<IRepository<CalendarEvent>, EfRepository<CalendarEvent>>();
+    builder.Services.AddScoped<IRepository<TodoItem>, EfRepository<TodoItem>>();
+    builder.Services.AddScoped<IRepository<WorkTask>, EfRepository<WorkTask>>();
+    builder.Services.AddScoped<IRepository<BlogPost>, EfRepository<BlogPost>>();
+    builder.Services.AddScoped<IRepository<GuestBookEntry>, EfRepository<GuestBookEntry>>();
+    builder.Services.AddScoped<IRepository<ContactMethod>, EfRepository<ContactMethod>>();
+}
+else
+{
+    // Repositories — JSON fallback (reads/writes to Data/JsonData/*.json)
+    builder.Services.AddScoped<IRepository<User>, JsonRepository<User>>();
+    builder.Services.AddScoped<IRepository<PersonalProfile>, JsonRepository<PersonalProfile>>();
+    builder.Services.AddScoped<IRepository<Education>, JsonRepository<Education>>();
+    builder.Services.AddScoped<IRepository<WorkExperience>, JsonRepository<WorkExperience>>();
+    builder.Services.AddScoped<IRepository<Skill>, JsonRepository<Skill>>();
+    builder.Services.AddScoped<IRepository<Portfolio>, JsonRepository<Portfolio>>();
+    builder.Services.AddScoped<IRepository<CalendarEvent>, JsonRepository<CalendarEvent>>();
+    builder.Services.AddScoped<IRepository<TodoItem>, JsonRepository<TodoItem>>();
+    builder.Services.AddScoped<IRepository<WorkTask>, JsonRepository<WorkTask>>();
+    builder.Services.AddScoped<IRepository<BlogPost>, JsonRepository<BlogPost>>();
+    builder.Services.AddScoped<IRepository<GuestBookEntry>, JsonRepository<GuestBookEntry>>();
+    builder.Services.AddScoped<IRepository<ContactMethod>, JsonRepository<ContactMethod>>();
+}
 
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -111,13 +148,22 @@ builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
 
 var app = builder.Build();
 
-// Auto-create tables and seed data on startup
-using (var scope = app.Services.CreateScope())
+// Startup: migrate/seed when DB is available; log mode when using JSON fallback
+if (useDatabase)
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.EnsureCreated();
     await DatabaseSeeder.CreateIndexesAsync(db);
     await DatabaseSeeder.SeedAsync(db);
+
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    logger.LogInformation("啟動模式: 資料庫 (MariaDB)");
+}
+else
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning("啟動模式: JSON Fallback — 資料庫無法連線，使用本地 JSON 資料 (Data/JsonData/)");
 }
 
 // Middleware pipeline

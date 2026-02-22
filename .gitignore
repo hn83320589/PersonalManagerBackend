@@ -390,10 +390,10 @@ TestResults/
 .dockerignore
 
 # Secrets and keys
+# appsettings.json is committed (contains only placeholders, NO real secrets)
+# appsettings.Development.json is gitignored (contains real local dev secrets)
 appsettings.*.json
 !appsettings.json
-!appsettings.Development.json
-!appsettings.EntityFramework.json
 secrets.json
 *.key
 *.pem

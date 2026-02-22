@@ -5,7 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PersonalManager.Api</RootNamespace>
-    <DefaultItemExcludes>$(DefaultItemExcludes);DatabaseTest\**;tests\**;sql\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

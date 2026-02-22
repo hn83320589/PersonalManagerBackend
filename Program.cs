@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PersonalManager.Api.Auth;
+using PersonalManager.Api.Data;
 using PersonalManager.Api.Middleware;
 using PersonalManager.Api.Models;
 using PersonalManager.Api.Repositories;
@@ -15,7 +17,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
         o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        o.JsonSerializerOptions.PropertyNamingPolicy = null; // PascalCase to match DTOs
+        o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
 // Swagger
@@ -73,19 +75,24 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Repositories (JsonRepository for all entities)
-builder.Services.AddSingleton<IRepository<User>, JsonRepository<User>>();
-builder.Services.AddSingleton<IRepository<PersonalProfile>, JsonRepository<PersonalProfile>>();
-builder.Services.AddSingleton<IRepository<Education>, JsonRepository<Education>>();
-builder.Services.AddSingleton<IRepository<WorkExperience>, JsonRepository<WorkExperience>>();
-builder.Services.AddSingleton<IRepository<Skill>, JsonRepository<Skill>>();
-builder.Services.AddSingleton<IRepository<Portfolio>, JsonRepository<Portfolio>>();
-builder.Services.AddSingleton<IRepository<CalendarEvent>, JsonRepository<CalendarEvent>>();
-builder.Services.AddSingleton<IRepository<TodoItem>, JsonRepository<TodoItem>>();
-builder.Services.AddSingleton<IRepository<WorkTask>, JsonRepository<WorkTask>>();
-builder.Services.AddSingleton<IRepository<BlogPost>, JsonRepository<BlogPost>>();
-builder.Services.AddSingleton<IRepository<GuestBookEntry>, JsonRepository<GuestBookEntry>>();
-builder.Services.AddSingleton<IRepository<ContactMethod>, JsonRepository<ContactMethod>>();
+// Database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+// Repositories (EF Core)
+builder.Services.AddScoped<IRepository<User>, EfRepository<User>>();
+builder.Services.AddScoped<IRepository<PersonalProfile>, EfRepository<PersonalProfile>>();
+builder.Services.AddScoped<IRepository<Education>, EfRepository<Education>>();
+builder.Services.AddScoped<IRepository<WorkExperience>, EfRepository<WorkExperience>>();
+builder.Services.AddScoped<IRepository<Skill>, EfRepository<Skill>>();
+builder.Services.AddScoped<IRepository<Portfolio>, EfRepository<Portfolio>>();
+builder.Services.AddScoped<IRepository<CalendarEvent>, EfRepository<CalendarEvent>>();
+builder.Services.AddScoped<IRepository<TodoItem>, EfRepository<TodoItem>>();
+builder.Services.AddScoped<IRepository<WorkTask>, EfRepository<WorkTask>>();
+builder.Services.AddScoped<IRepository<BlogPost>, EfRepository<BlogPost>>();
+builder.Services.AddScoped<IRepository<GuestBookEntry>, EfRepository<GuestBookEntry>>();
+builder.Services.AddScoped<IRepository<ContactMethod>, EfRepository<ContactMethod>>();
 
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -103,6 +110,15 @@ builder.Services.AddScoped<IGuestBookEntryService, GuestBookEntryService>();
 builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
 
 var app = builder.Build();
+
+// Auto-create tables and seed data on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.EnsureCreated();
+    await DatabaseSeeder.CreateIndexesAsync(db);
+    await DatabaseSeeder.SeedAsync(db);
+}
 
 // Middleware pipeline
 app.UseMiddleware<ErrorHandlingMiddleware>();

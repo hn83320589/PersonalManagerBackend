@@ -244,42 +244,81 @@ DB 模式會自動執行 `EnsureCreated()` 建立資料表與索引，不需要�
 
 ## 建置與部署
 
+### 設定檔架構（重要）
+
+| 檔案 | 提交至 git | 用途 |
+|------|-----------|------|
+| `appsettings.json` | ✅ 是 | 預設值與占位符，**不含任何真實密碼** |
+| `appsettings.Development.json` | ❌ 否（gitignored） | 本地開發的真實連線字串與密鑰 |
+| 環境變數 | — | 生產環境（Zeabur）覆寫設定 |
+
+ASP.NET Core 載入順序：`appsettings.json` → `appsettings.{Environment}.json` → 環境變數。
+後面的設定會覆蓋前面，因此生產環境只需設定環境變數即可。
+
+---
+
+### 本地開發
+
+`appsettings.Development.json`（本機存在，不提交）應包含：
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=...;Database=personal_manager;User=...;Password=...;"
+  },
+  "Jwt": {
+    "SecretKey": "your_local_secret_key_at_least_32_chars"
+  }
+}
+```
+
 ```bash
-# 建置
+# 開發模式啟動（自動讀取 appsettings.Development.json）
+dotnet run
+```
+
+---
+
+### 部署到 Zeabur
+
+1. 將後端倉庫連接至 Zeabur 服務（Git 連動自動部署）
+
+2. 在 Zeabur 服務的「環境變數」中設定以下兩個必填項：
+
+   | 變數名稱 | 說明 |
+   |----------|------|
+   | `ConnectionStrings__DefaultConnection` | MariaDB 連線字串（含密碼） |
+   | `Jwt__SecretKey` | JWT 簽名密鑰，至少 32 字元的隨機字串 |
+
+   範例值：
+   ```
+   ConnectionStrings__DefaultConnection = Server=hnd1.clusters.zeabur.com;Port=30462;Database=personal_manager;User=personal_manager;Password=<密碼>;CharSet=utf8mb4;SslMode=None;
+   Jwt__SecretKey = <至少32字元的隨機字串>
+   ```
+
+3. 推送 `main` branch，Zeabur 自動觸發建置與部署
+
+   Zeabur 會執行：
+   ```bash
+   dotnet publish -c Release
+   ```
+   並以 `ASPNETCORE_ENVIRONMENT=Production` 啟動，不會讀取 `appsettings.Development.json`。
+
+---
+
+### 手動建置（本地驗證）
+
+```bash
+# 建置確認無錯誤
 dotnet build PersonalManager.Api.csproj
 
-# 發布（Release 模式）
+# 發布 Release 版本
 dotnet publish -c Release -o ./publish
 
-# 執行發布版本
+# 執行發布版本（需先設定環境變數）
+export ConnectionStrings__DefaultConnection="..."
+export Jwt__SecretKey="..."
 dotnet ./publish/PersonalManager.Api.dll
-```
-
-### 生產環境設定
-
-透過環境變數覆寫設定：
-
-```bash
-# JWT 密鑰（必填，至少 32 字元）
-Jwt__SecretKey=your_production_secret_key
-
-# 資料庫連線字串（切換至 DB 模式時）
-ConnectionStrings__DefaultConnection=your_connection_string
-
-# CORS 允許的前端 URL
-# 目前寫死在 Program.cs，生產環境需修改
-```
-
-可部署至 Zeabur 或任何支援 .NET 9.0 的主機。
-
-## 測試
-
-```bash
-# 執行所有測試
-dotnet test PersonalManager.Api.csproj
-
-# 測試專案位置
-# tests/PersonalManager.Api.Tests/
 ```
 
 ## 相關連結

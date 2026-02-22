@@ -170,17 +170,23 @@ PersonalManagerBackend/
 
 ---
 
-## 設定檔說明
+## 設定檔架構
 
-### `appsettings.json`
+| 檔案 | 提交至 git | 說明 |
+|------|-----------|------|
+| `appsettings.json` | ✅ 是 | 只含占位符與非機密設定，**不能放真實密碼** |
+| `appsettings.Development.json` | ❌ 否（gitignored） | 本地開發的真實連線字串與密鑰 |
+| Zeabur 環境變數 | — | 生產環境覆寫，格式為雙底線（`__`）分隔層級 |
+
+### `appsettings.json`（已提交，只有占位符）
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=...;Database=personal_manager;..."
+    "DefaultConnection": ""
   },
   "Jwt": {
-    "SecretKey": "...",
+    "SecretKey": "CHANGE_THIS_TO_A_RANDOM_SECRET_KEY_AT_LEAST_32_CHARACTERS",
     "Issuer": "PersonalManagerAPI",
     "Audience": "PersonalManagerClient",
     "ExpiryHours": 24
@@ -188,12 +194,28 @@ PersonalManagerBackend/
 }
 ```
 
-- 若要在本地使用 JSON fallback，可將 `DefaultConnection` 設為空字串。
-- JWT 設定區段名稱為 `Jwt`（不是 `JwtSettings`）。
+### `appsettings.Development.json`（gitignored，本地自行建立）
 
-### `appsettings.Development.json`
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=...;Database=personal_manager;User=...;Password=...;"
+  },
+  "Jwt": {
+    "SecretKey": "your_local_secret_key_at_least_32_chars"
+  }
+}
+```
 
-開發環境的補充設定，不覆蓋 `appsettings.json` 的連線字串。
+### 生產環境（Zeabur 環境變數）
+
+```
+ConnectionStrings__DefaultConnection = <MariaDB 連線字串>
+Jwt__SecretKey = <隨機密鑰>
+```
+
+- JWT 設定區段名稱為 `Jwt`（非 `JwtSettings`）
+- `DefaultConnection` 為空字串時，後端自動 fallback 至 JSON 模式
 
 ---
 
@@ -273,7 +295,11 @@ PersonalManagerBackend/
 ## 最新異動記錄
 
 ### 2026/02/22
-- **JSON 序列化修復**：`PropertyNamingPolicy` 從 `null`（PascalCase）改為 `CamelCase`，確保前後端欄位名稱一致
-- **DB 自動偵測 fallback**：`Program.cs` 新增啟動時 DB 連線探測，無法連線時自動使用本地 JSON 資料
-- **移除 `sql/` 資料夾**：SQL 建表腳本由 EF Core `EnsureCreated()` + `DatabaseSeeder.cs` 取代
-- **前後端欄位對齊驗證**：所有 12 個實體的 DTO 欄位與前端 TypeScript 介面確認完全一致
+- **資安修復：移除 credentials 洩露**：
+  - `appsettings.json` 改為只含占位符（空連線字串 + 假密鑰）
+  - `appsettings.Development.json` 移入 `.gitignore`，存放本地真實密鑰
+  - 生產環境改用 Zeabur 環境變數（`ConnectionStrings__DefaultConnection`、`Jwt__SecretKey`）
+- **JSON 序列化修復**：`PropertyNamingPolicy` 從 `null`（PascalCase）改為 `CamelCase`
+- **DB 自動偵測 fallback**：啟動時探測 DB，失敗自動使用本地 JSON 資料
+- **移除 `sql/` 資料夾**：由 EF Core `EnsureCreated()` + `DatabaseSeeder.cs` 取代
+- **前後端欄位對齊驗證**：所有 12 個實體的 DTO 欄位與前端 TypeScript 介面確認一致

@@ -24,6 +24,9 @@ public class PersonalProfile
     [StringLength(100)]
     public string Location { get; set; } = string.Empty;
 
+    [StringLength(50)]
+    public string ThemeColor { get; set; } = "blue";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

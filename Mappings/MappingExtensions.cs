@@ -28,12 +28,14 @@ public static class MappingExtensions
     {
         Id = p.Id, UserId = p.UserId, Title = p.Title, Summary = p.Summary,
         Description = p.Description, ProfileImageUrl = p.ProfileImageUrl,
-        Website = p.Website, Location = p.Location, CreatedAt = p.CreatedAt, UpdatedAt = p.UpdatedAt
+        Website = p.Website, Location = p.Location, ThemeColor = p.ThemeColor,
+        CreatedAt = p.CreatedAt, UpdatedAt = p.UpdatedAt
     };
     public static PersonalProfile ToEntity(this CreateProfileDto d) => new()
     {
         UserId = d.UserId, Title = d.Title, Summary = d.Summary, Description = d.Description,
-        ProfileImageUrl = d.ProfileImageUrl, Website = d.Website, Location = d.Location
+        ProfileImageUrl = d.ProfileImageUrl, Website = d.Website, Location = d.Location,
+        ThemeColor = d.ThemeColor
     };
     public static void ApplyUpdate(this PersonalProfile p, UpdateProfileDto d)
     {
@@ -43,6 +45,7 @@ public static class MappingExtensions
         if (d.ProfileImageUrl != null) p.ProfileImageUrl = d.ProfileImageUrl;
         if (d.Website != null) p.Website = d.Website;
         if (d.Location != null) p.Location = d.Location;
+        if (d.ThemeColor != null) p.ThemeColor = d.ThemeColor;
     }
 
     // ===== Education =====
@@ -250,12 +253,12 @@ public static class MappingExtensions
     // ===== GuestBookEntry =====
     public static GuestBookEntryResponse ToResponse(this GuestBookEntry g) => new()
     {
-        Id = g.Id, Name = g.Name, Email = g.Email, Message = g.Message,
-        IsApproved = g.IsApproved, AdminReply = g.AdminReply, CreatedAt = g.CreatedAt
+        Id = g.Id, TargetUserId = g.TargetUserId, Name = g.Name, Email = g.Email,
+        Message = g.Message, IsApproved = g.IsApproved, AdminReply = g.AdminReply, CreatedAt = g.CreatedAt
     };
     public static GuestBookEntry ToEntity(this CreateGuestBookEntryDto d) => new()
     {
-        Name = d.Name, Email = d.Email, Message = d.Message
+        TargetUserId = d.TargetUserId, Name = d.Name, Email = d.Email, Message = d.Message
     };
     public static void ApplyUpdate(this GuestBookEntry g, UpdateGuestBookEntryDto d)
     {

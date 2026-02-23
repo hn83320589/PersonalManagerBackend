@@ -16,6 +16,10 @@ public class GuestBookEntriesController : ControllerBase
     public async Task<IActionResult> GetApproved()
         => Ok(ApiResponse<List<GuestBookEntryResponse>>.Ok(await _service.GetApprovedAsync()));
 
+    [HttpGet("user/{targetUserId}")]
+    public async Task<IActionResult> GetApprovedByUser(int targetUserId)
+        => Ok(ApiResponse<List<GuestBookEntryResponse>>.Ok(await _service.GetApprovedByTargetUserIdAsync(targetUserId)));
+
     [Authorize]
     [HttpGet("all")]
     public async Task<IActionResult> GetAll()

@@ -34,6 +34,10 @@ public class BlogPostsController : ControllerBase
         return item != null ? Ok(ApiResponse<BlogPostResponse>.Ok(item)) : NotFound(ApiResponse.Fail("Blog post not found"));
     }
 
+    [HttpGet("user/{userId}/public")]
+    public async Task<IActionResult> GetPublicByUserId(int userId)
+        => Ok(ApiResponse<List<BlogPostResponse>>.Ok(await _service.GetPublicByUserIdAsync(userId)));
+
     [Authorize]
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetByUserId(int userId)

@@ -5,6 +5,7 @@ namespace PersonalManager.Api.Models;
 public class GuestBookEntry
 {
     public int Id { get; set; }
+    public int TargetUserId { get; set; } = 1; // 目標用戶ID（留言給誰）
 
     [Required, StringLength(100)]
     public string Name { get; set; } = string.Empty;

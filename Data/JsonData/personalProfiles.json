@@ -2,15 +2,14 @@
   {
     "Id": 1,
     "UserId": 1,
-    "Title": "全端開發工程師",
-    "Summary": "專精於 .NET Core 與 Vue.js 開發",
-    "Description": "擁有5年以上全端開發經驗，熟悉現代化網頁開發技術棧，包含後端API設計、前端框架應用、資料庫優化等領域。擅長使用 C# .NET Core 開發RESTful API，以及 Vue.js 建構響應式用戶介面。對於軟體架構設計、程式碼品質管控、團隊協作開發都有深度實務經驗。",
+    "Title": "\u5168\u7AEF\u958B\u767C\u5DE5\u7A0B\u5E2B",
+    "Summary": "\u5C08\u7CBE\u65BC .NET Core \u8207 Vue.js \u958B\u767C",
+    "Description": "\u64C1\u67095\u5E74\u4EE5\u4E0A\u5168\u7AEF\u958B\u767C\u7D93\u9A57\uFF0C\u719F\u6089\u73FE\u4EE3\u5316\u7DB2\u9801\u958B\u767C\u6280\u8853\u68E7\uFF0C\u5305\u542B\u5F8C\u7AEFAPI\u8A2D\u8A08\u3001\u524D\u7AEF\u6846\u67B6\u61C9\u7528\u3001\u8CC7\u6599\u5EAB\u512A\u5316\u7B49\u9818\u57DF\u3002\u64C5\u9577\u4F7F\u7528 C# .NET Core \u958B\u767CRESTful API\uFF0C\u4EE5\u53CA Vue.js \u5EFA\u69CB\u97FF\u61C9\u5F0F\u7528\u6236\u4ECB\u9762\u3002\u5C0D\u65BC\u8EDF\u9AD4\u67B6\u69CB\u8A2D\u8A08\u3001\u7A0B\u5F0F\u78BC\u54C1\u8CEA\u7BA1\u63A7\u3001\u5718\u968A\u5354\u4F5C\u958B\u767C\u90FD\u6709\u6DF1\u5EA6\u5BE6\u52D9\u7D93\u9A57\u3002",
     "ProfileImageUrl": "https://example.com/images/profile.jpg",
     "Website": "https://example.com",
-    "Location": "台灣 台北",
-    "Birthday": "1990-05-15T00:00:00Z",
-    "IsPublic": true,
+    "Location": "\u53F0\u7063 \u53F0\u5317",
+    "ThemeColor": "blue",
     "CreatedAt": "2025-08-12T09:00:00Z",
-    "UpdatedAt": "2025-08-12T09:00:00Z"
+    "UpdatedAt": "2026-02-23T07:23:43.9510375Z"
   }
 ]

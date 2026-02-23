@@ -29,6 +29,12 @@ public class UserResponse
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+public class PublicUserDto
+{
+    public int Id { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+}
 
 // ===== PersonalProfile =====
 public class CreateProfileDto
@@ -40,6 +46,7 @@ public class CreateProfileDto
     public string ProfileImageUrl { get; set; } = string.Empty;
     public string Website { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
+    public string ThemeColor { get; set; } = "blue";
 }
 public class UpdateProfileDto
 {
@@ -49,6 +56,7 @@ public class UpdateProfileDto
     public string? ProfileImageUrl { get; set; }
     public string? Website { get; set; }
     public string? Location { get; set; }
+    public string? ThemeColor { get; set; }
 }
 public class ProfileResponse
 {
@@ -60,8 +68,20 @@ public class ProfileResponse
     public string ProfileImageUrl { get; set; } = string.Empty;
     public string Website { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
+    public string ThemeColor { get; set; } = "blue";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+public class ProfileDirectoryDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+    public string ProfileImageUrl { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public string ThemeColor { get; set; } = "blue";
 }
 
 // ===== Education =====
@@ -370,6 +390,7 @@ public class BlogPostResponse
 // ===== GuestBookEntry =====
 public class CreateGuestBookEntryDto
 {
+    public int TargetUserId { get; set; } = 1;
     [Required] public string Name { get; set; } = string.Empty;
     [EmailAddress] public string Email { get; set; } = string.Empty;
     [Required] public string Message { get; set; } = string.Empty;
@@ -382,6 +403,7 @@ public class UpdateGuestBookEntryDto
 public class GuestBookEntryResponse
 {
     public int Id { get; set; }
+    public int TargetUserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;

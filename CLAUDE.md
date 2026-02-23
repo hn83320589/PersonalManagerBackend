@@ -294,6 +294,22 @@ Jwt__SecretKey = <隨機密鑰>
 
 ## 最新異動記錄
 
+### 2026/02/23
+- **多使用者架構補強**：
+  - `PersonalProfile` 加入 `ThemeColor` 欄位（預設 `"blue"`）
+  - `GuestBookEntry` 加入 `TargetUserId` 欄位（目標用戶ID）
+  - `DTOs/EntityDtos.cs` 新增 `PublicUserDto`、`ProfileDirectoryDto`，更新相關 DTO
+  - `Mappings/MappingExtensions.cs` 更新 PersonalProfile 和 GuestBookEntry 映射
+  - `GET /api/users/public` — 公開用戶列表（無需認證）
+  - `GET /api/users/public/{username}` — 依 username 查詢用戶（無需認證）
+  - `GET /api/profiles/directory` — 合併 Profile + User 的目錄清單（無需認證）
+  - `GET /api/guestbookentries/user/{targetUserId}` — 查詢特定用戶的已審核留言
+  - JSON fallback 資料更新：`personalProfiles.json` 加 `themeColor`，`guestBookEntries.json` 加 `targetUserId`
+  - **DB 模式注意**：schema 有異動，需 DROP DB 後重建（EnsureCreated）或執行 ALTER TABLE
+- **AuthResponse UserId 修復**：
+  - `DTOs/AuthDtos.cs` — `AuthResponse` 新增 `public int UserId { get; set; }` 欄位
+  - `Auth/AuthService.cs` — `GenerateAuthResponse()` 加入 `UserId = user.Id`，確保登入/註冊回應包含 userId
+
 ### 2026/02/22
 - **資安修復：移除 credentials 洩露**：
   - `appsettings.json` 改為只含占位符（空連線字串 + 假密鑰）

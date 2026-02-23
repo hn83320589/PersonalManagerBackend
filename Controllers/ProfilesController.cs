@@ -10,7 +10,36 @@ namespace PersonalManager.Api.Controllers;
 public class ProfilesController : ControllerBase
 {
     private readonly IProfileService _service;
-    public ProfilesController(IProfileService service) => _service = service;
+    private readonly IUserService _userService;
+    public ProfilesController(IProfileService service, IUserService userService)
+    {
+        _service = service;
+        _userService = userService;
+    }
+
+    [HttpGet("directory")]
+    public async Task<IActionResult> GetDirectory()
+    {
+        var profiles = await _service.GetAllAsync();
+        var users = await _userService.GetAllAsync();
+        var userMap = users.ToDictionary(u => u.Id);
+
+        var result = profiles
+            .Where(p => userMap.ContainsKey(p.UserId))
+            .Select(p => new ProfileDirectoryDto
+            {
+                UserId = p.UserId,
+                Username = userMap[p.UserId].Username,
+                FullName = userMap[p.UserId].FullName,
+                Title = p.Title,
+                Summary = p.Summary,
+                ProfileImageUrl = p.ProfileImageUrl,
+                Location = p.Location,
+                ThemeColor = p.ThemeColor
+            }).ToList();
+
+        return Ok(ApiResponse<List<ProfileDirectoryDto>>.Ok(result));
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()

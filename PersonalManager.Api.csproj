@@ -19,4 +19,10 @@
     <Content Update="Data\JsonData\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- 排除 tests/ 與 src/ 子目錄，避免其 obj/ 產生的 .cs 被主專案誤引入 -->
+    <Compile Remove="tests\**\*.cs" />
+    <Compile Remove="src\**\*.cs" />
+  </ItemGroup>
+
 </Project>

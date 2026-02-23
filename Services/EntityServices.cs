@@ -262,6 +262,7 @@ public class WorkTaskService : CrudService<WorkTask, CreateWorkTaskDto, UpdateWo
 public interface IBlogPostService : ICrudService<BlogPost, CreateBlogPostDto, UpdateBlogPostDto, BlogPostResponse>
 {
     Task<List<BlogPostResponse>> GetByUserIdAsync(int userId);
+    Task<List<BlogPostResponse>> GetPublicByUserIdAsync(int userId);
     Task<List<BlogPostResponse>> GetPublishedAsync();
     Task<BlogPostResponse?> GetBySlugAsync(string slug);
 }
@@ -297,6 +298,12 @@ public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBl
         return items.OrderByDescending(b => b.CreatedAt).Select(MapToResponse).ToList();
     }
 
+    public async Task<List<BlogPostResponse>> GetPublicByUserIdAsync(int userId)
+    {
+        var items = await Repository.FindAsync(b => b.UserId == userId && b.Status == BlogPostStatus.Published && b.IsPublic);
+        return items.OrderByDescending(b => b.PublishedAt).Select(MapToResponse).ToList();
+    }
+
     public async Task<List<BlogPostResponse>> GetPublishedAsync()
     {
         var items = await Repository.FindAsync(b => b.Status == BlogPostStatus.Published && b.IsPublic);
@@ -325,6 +332,7 @@ public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBl
 public interface IGuestBookEntryService : ICrudService<GuestBookEntry, CreateGuestBookEntryDto, UpdateGuestBookEntryDto, GuestBookEntryResponse>
 {
     Task<List<GuestBookEntryResponse>> GetApprovedAsync();
+    Task<List<GuestBookEntryResponse>> GetApprovedByTargetUserIdAsync(int targetUserId);
 }
 
 public class GuestBookEntryService : CrudService<GuestBookEntry, CreateGuestBookEntryDto, UpdateGuestBookEntryDto, GuestBookEntryResponse>, IGuestBookEntryService
@@ -337,6 +345,12 @@ public class GuestBookEntryService : CrudService<GuestBookEntry, CreateGuestBook
     public async Task<List<GuestBookEntryResponse>> GetApprovedAsync()
     {
         var items = await Repository.FindAsync(g => g.IsApproved);
+        return items.OrderByDescending(g => g.CreatedAt).Select(MapToResponse).ToList();
+    }
+
+    public async Task<List<GuestBookEntryResponse>> GetApprovedByTargetUserIdAsync(int targetUserId)
+    {
+        var items = await Repository.FindAsync(g => g.TargetUserId == targetUserId && g.IsApproved);
         return items.OrderByDescending(g => g.CreatedAt).Select(MapToResponse).ToList();
     }
 }

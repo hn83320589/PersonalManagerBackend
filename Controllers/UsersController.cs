@@ -13,6 +13,35 @@ public class UsersController : ControllerBase
     private readonly IUserService _service;
     public UsersController(IUserService service) => _service = service;
 
+    [AllowAnonymous]
+    [HttpGet("public")]
+    public async Task<IActionResult> GetAllPublic()
+    {
+        var users = await _service.GetAllAsync();
+        var result = users.Where(u => u.IsActive).Select(u => new PublicUserDto
+        {
+            Id = u.Id,
+            Username = u.Username,
+            FullName = u.FullName
+        }).ToList();
+        return Ok(ApiResponse<List<PublicUserDto>>.Ok(result));
+    }
+
+    [AllowAnonymous]
+    [HttpGet("public/{username}")]
+    public async Task<IActionResult> GetPublicByUsername(string username)
+    {
+        var users = await _service.GetAllAsync();
+        var user = users.FirstOrDefault(u => u.Username == username && u.IsActive);
+        if (user == null) return NotFound(ApiResponse.Fail("User not found"));
+        return Ok(ApiResponse<PublicUserDto>.Ok(new PublicUserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FullName = user.FullName
+        }));
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
         => Ok(ApiResponse<List<UserResponse>>.Ok(await _service.GetAllAsync()));

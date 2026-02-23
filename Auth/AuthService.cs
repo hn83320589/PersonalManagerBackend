@@ -96,6 +96,7 @@ public class AuthService : IAuthService
 
         return new AuthResponse
         {
+            UserId = user.Id,
             Token = new JwtSecurityTokenHandler().WriteToken(token),
             Username = user.Username,
             Email = user.Email,

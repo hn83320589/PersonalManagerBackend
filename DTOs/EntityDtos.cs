@@ -368,6 +368,7 @@ public class UpdateBlogPostDto
     public string? Tags { get; set; }
     public BlogPostStatus? Status { get; set; }
     public bool? IsPublic { get; set; }
+    public DateTime? PublishedAt { get; set; }
 }
 public class BlogPostResponse
 {

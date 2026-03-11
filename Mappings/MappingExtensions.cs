@@ -248,6 +248,7 @@ public static class MappingExtensions
         if (d.Tags != null) b.Tags = d.Tags;
         if (d.Status.HasValue) b.Status = d.Status.Value;
         if (d.IsPublic.HasValue) b.IsPublic = d.IsPublic.Value;
+        if (d.PublishedAt.HasValue) b.PublishedAt = d.PublishedAt;
     }
 
     // ===== GuestBookEntry =====

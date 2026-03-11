@@ -309,6 +309,9 @@ Jwt__SecretKey = <隨機密鑰>
 - **AuthResponse UserId 修復**：
   - `DTOs/AuthDtos.cs` — `AuthResponse` 新增 `public int UserId { get; set; }` 欄位
   - `Auth/AuthService.cs` — `GenerateAuthResponse()` 加入 `UserId = user.Id`，確保登入/註冊回應包含 userId
+- **Blog publishedAt 修復**：
+  - `DTOs/EntityDtos.cs` — `UpdateBlogPostDto` 新增 `public DateTime? PublishedAt { get; set; }` 欄位
+  - `Mappings/MappingExtensions.cs` — `BlogPost.ApplyUpdate()` 加入 `if (d.PublishedAt.HasValue) b.PublishedAt = d.PublishedAt`
 
 ### 2026/02/22
 - **資安修復：移除 credentials 洩露**：

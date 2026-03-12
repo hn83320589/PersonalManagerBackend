@@ -40,8 +40,31 @@ public class BlogPostsController : ControllerBase
 
     [Authorize]
     [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetByUserId(int userId)
-        => Ok(ApiResponse<List<BlogPostResponse>>.Ok(await _service.GetByUserIdAsync(userId)));
+    public async Task<IActionResult> GetByUserId(int userId, [FromQuery] string? tag = null)
+    {
+        var posts = await _service.GetByUserIdAsync(userId);
+        if (!string.IsNullOrEmpty(tag))
+        {
+            posts = posts.Where(p => p.Tags != null &&
+                p.Tags.Split(',').Select(t => t.Trim()).Contains(tag, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+        }
+        return Ok(ApiResponse<List<BlogPostResponse>>.Ok(posts));
+    }
+
+    [HttpGet("user/{userId}/tags")]
+    public async Task<IActionResult> GetTagsByUserId(int userId)
+    {
+        var posts = await _service.GetPublicByUserIdAsync(userId);
+        var tags = posts
+            .Where(p => !string.IsNullOrEmpty(p.Tags))
+            .SelectMany(p => p.Tags.Split(',').Select(t => t.Trim()))
+            .Where(t => !string.IsNullOrEmpty(t))
+            .Distinct()
+            .OrderBy(t => t)
+            .ToList();
+        return Ok(ApiResponse<List<string>>.Ok(tags));
+    }
 
     [Authorize] [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBlogPostDto dto)

@@ -19,6 +19,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<BlogPost> BlogPosts => Set<BlogPost>();
     public DbSet<GuestBookEntry> GuestBookEntries => Set<GuestBookEntry>();
     public DbSet<ContactMethod> ContactMethods => Set<ContactMethod>();
+    public DbSet<FileUpload> FileUploads => Set<FileUpload>();
+    public DbSet<PortfolioAttachment> PortfolioAttachments => Set<PortfolioAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

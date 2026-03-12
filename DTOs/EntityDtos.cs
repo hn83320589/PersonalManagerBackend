@@ -413,6 +413,48 @@ public class GuestBookEntryResponse
     public DateTime CreatedAt { get; set; }
 }
 
+// ===== FileUpload =====
+public class FileUploadResponse
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string StoredName { get; set; } = string.Empty;
+    public string FileUrl { get; set; } = string.Empty;
+    public string FileType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string MimeType { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
+// ===== PortfolioAttachment =====
+public class CreatePortfolioAttachmentDto
+{
+    public int PortfolioId { get; set; }
+    public int? FileUploadId { get; set; }
+    [Required] public string FileName { get; set; } = string.Empty;
+    [Required] public string FileUrl { get; set; } = string.Empty;
+    public string FileType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public int SortOrder { get; set; }
+}
+public class UpdatePortfolioAttachmentDto
+{
+    public int? SortOrder { get; set; }
+}
+public class PortfolioAttachmentResponse
+{
+    public int Id { get; set; }
+    public int PortfolioId { get; set; }
+    public int? FileUploadId { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string FileUrl { get; set; } = string.Empty;
+    public string FileType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public int SortOrder { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 // ===== ContactMethod =====
 public class CreateContactMethodDto
 {

@@ -4,6 +4,18 @@ This file provides guidance to Claude Code when working with the backend codebas
 
 ---
 
+## 給 AI 的指示
+
+每次任務完成後，你必須：
+1. 更新下方「進度」區塊的 checkbox
+2. 若有新的技術債，加入「已知問題」
+3. 若做了未預期的架構決策，加入「架構決策」並說明原因
+4. 回報你更新了哪些區塊
+
+以上未完成，任務視為未完成。
+
+---
+
 ## 快速啟動
 
 ```bash
@@ -67,6 +79,34 @@ HTTP 請求
 - **camelCase**：所有 JSON 欄位名稱使用 camelCase（`PropertyNamingPolicy.CamelCase`）
 - **Enum 為字串**：Enum 序列化為字串（如 `"Published"`、`"Expert"`）
 - 前端 TypeScript 介面與此完全對應
+
+---
+
+## Constraints（不可以動的東西）
+
+通用限制（所有專案適用）：
+- 未告知不得引入新的 library
+- 不得修改未被要求的現有功能
+- 不得動資料庫 schema，除非任務明確要求
+
+---
+
+## 學習現有程式碼的方式
+
+在開始任何新功能前：
+- 找 3 個類似的現有功能或元件作為參考
+- 確認常用的 pattern 和 utility
+- 使用專案已有的 library，不自行發明
+
+---
+
+## 測試原則
+
+- 測試行為，不測實作細節
+- 一個 test case 一個 assertion（可能時）
+- test 名稱要能描述情境，看名字就知道在測什麼
+- 使用專案現有的 test utilities / helpers
+- 測試必須是 deterministic，禁止依賴時間或隨機值
 
 ---
 
@@ -293,6 +333,23 @@ Jwt__SecretKey = <隨機密鑰>
 ---
 
 ## 最新異動記錄
+
+### 2026/03/12
+- **檔案管理系統**：
+  - 新增 `Settings/FileStorageSettings.cs`（RootPath、MaxFileSizeMB、AllowedExtensions）
+  - `appsettings.json` 加入 `FileStorage` section
+  - `Program.cs` 加入 `Configure<FileStorageSettings>`、`UseStaticFiles`（`/files` path）、EF/JSON repository 及 service 注冊
+  - 新增 `Models/FileUpload.cs`、`Models/PortfolioAttachment.cs`
+  - `Data/ApplicationDbContext.cs` 加入兩個新 DbSet
+  - `DTOs/EntityDtos.cs` 新增 `FileUploadResponse`、`CreatePortfolioAttachmentDto`、`PortfolioAttachmentResponse`
+  - `Mappings/MappingExtensions.cs` 新增 FileUpload、PortfolioAttachment 映射
+  - `Services/EntityServices.cs` 新增 `IFileUploadService`/`FileUploadService`（含上傳驗證）、`IPortfolioAttachmentService`/`PortfolioAttachmentService`
+  - 新增 `Controllers/FileUploadsController.cs`（GET/POST/DELETE，需 auth）
+  - 新增 `Controllers/PortfolioAttachmentsController.cs`（GET 公開，POST/DELETE 需 auth）
+  - 新增 `Data/JsonData/FileUploads.json`、`Data/JsonData/PortfolioAttachments.json`（空陣列）
+- **部落格標籤端點**：
+  - `Controllers/BlogPostsController.cs` `GetByUserId` 加入 `?tag=` query 過濾
+  - 新增 `GET /api/blogposts/user/{userId}/tags` 端點（回傳所有已用標籤）
 
 ### 2026/02/23
 - **多使用者架構補強**：

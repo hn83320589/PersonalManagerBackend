@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using PersonalManager.Api.DTOs;
 using PersonalManager.Api.Mappings;
 using PersonalManager.Api.Models;
 using PersonalManager.Api.Repositories;
+using PersonalManager.Api.Settings;
 
 namespace PersonalManager.Api.Services;
 
@@ -325,6 +329,103 @@ public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBl
         slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[^\w\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff-]", "");
         slug = System.Text.RegularExpressions.Regex.Replace(slug, @"-+", "-").Trim('-');
         return slug;
+    }
+}
+
+// ===== FileUpload Service =====
+public interface IFileUploadService
+{
+    Task<List<FileUploadResponse>> GetByUserIdAsync(int userId);
+    Task<FileUploadResponse> UploadAsync(IFormFile file, int userId);
+    Task<bool> DeleteAsync(int id, int userId);
+}
+
+public class FileUploadService : IFileUploadService
+{
+    private readonly IRepository<FileUpload> _repo;
+    private readonly FileStorageSettings _settings;
+    private readonly string _rootPath;
+
+    public FileUploadService(IRepository<FileUpload> repo, IOptions<FileStorageSettings> settings, IWebHostEnvironment env)
+    {
+        _repo = repo;
+        _settings = settings.Value;
+        _rootPath = Path.Combine(env.ContentRootPath, _settings.RootPath);
+    }
+
+    public async Task<List<FileUploadResponse>> GetByUserIdAsync(int userId)
+    {
+        var items = await _repo.FindAsync(f => f.UserId == userId);
+        return items.OrderByDescending(f => f.CreatedAt).Select(f => f.ToResponse()).ToList();
+    }
+
+    public async Task<FileUploadResponse> UploadAsync(IFormFile file, int userId)
+    {
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var storedName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(_rootPath, storedName);
+
+        Directory.CreateDirectory(_rootPath);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var fileType = ext switch
+        {
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" => "image",
+            ".pdf" => "pdf",
+            ".doc" or ".docx" => "document",
+            ".ppt" or ".pptx" => "presentation",
+            _ => "other"
+        };
+
+        var entity = new FileUpload
+        {
+            UserId = userId,
+            FileName = file.FileName,
+            StoredName = storedName,
+            FileUrl = $"/files/{storedName}",
+            FileType = fileType,
+            FileSize = file.Length,
+            MimeType = file.ContentType,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var saved = await _repo.AddAsync(entity);
+        return saved.ToResponse();
+    }
+
+    public async Task<bool> DeleteAsync(int id, int userId)
+    {
+        var items = await _repo.FindAsync(f => f.Id == id && f.UserId == userId);
+        var entity = items.FirstOrDefault();
+        if (entity == null) return false;
+
+        var filePath = Path.Combine(_rootPath, entity.StoredName);
+        if (File.Exists(filePath)) File.Delete(filePath);
+
+        return await _repo.DeleteAsync(id);
+    }
+}
+
+// ===== PortfolioAttachment Service =====
+public interface IPortfolioAttachmentService : ICrudService<PortfolioAttachment, CreatePortfolioAttachmentDto, UpdatePortfolioAttachmentDto, PortfolioAttachmentResponse>
+{
+    Task<List<PortfolioAttachmentResponse>> GetByPortfolioIdAsync(int portfolioId);
+}
+
+public class PortfolioAttachmentService : CrudService<PortfolioAttachment, CreatePortfolioAttachmentDto, UpdatePortfolioAttachmentDto, PortfolioAttachmentResponse>, IPortfolioAttachmentService
+{
+    public PortfolioAttachmentService(IRepository<PortfolioAttachment> repo) : base(repo) { }
+    protected override PortfolioAttachment MapToEntity(CreatePortfolioAttachmentDto dto) => dto.ToEntity();
+    protected override PortfolioAttachmentResponse MapToResponse(PortfolioAttachment entity) => entity.ToResponse();
+    protected override void ApplyUpdate(PortfolioAttachment entity, UpdatePortfolioAttachmentDto dto) => entity.ApplyUpdate(dto);
+
+    public async Task<List<PortfolioAttachmentResponse>> GetByPortfolioIdAsync(int portfolioId)
+    {
+        var items = await Repository.FindAsync(a => a.PortfolioId == portfolioId);
+        return items.OrderBy(a => a.SortOrder).Select(MapToResponse).ToList();
     }
 }
 

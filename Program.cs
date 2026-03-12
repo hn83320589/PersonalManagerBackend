@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using PersonalManager.Api.Auth;
 using PersonalManager.Api.Data;
@@ -9,6 +10,7 @@ using PersonalManager.Api.Middleware;
 using PersonalManager.Api.Models;
 using PersonalManager.Api.Repositories;
 using PersonalManager.Api.Services;
+using PersonalManager.Api.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +43,9 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+// FileStorage settings
+builder.Services.Configure<FileStorageSettings>(builder.Configuration.GetSection("FileStorage"));
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
@@ -113,6 +118,8 @@ if (useDatabase)
     builder.Services.AddScoped<IRepository<BlogPost>, EfRepository<BlogPost>>();
     builder.Services.AddScoped<IRepository<GuestBookEntry>, EfRepository<GuestBookEntry>>();
     builder.Services.AddScoped<IRepository<ContactMethod>, EfRepository<ContactMethod>>();
+    builder.Services.AddScoped<IRepository<FileUpload>, EfRepository<FileUpload>>();
+    builder.Services.AddScoped<IRepository<PortfolioAttachment>, EfRepository<PortfolioAttachment>>();
 }
 else
 {
@@ -129,6 +136,8 @@ else
     builder.Services.AddScoped<IRepository<BlogPost>, JsonRepository<BlogPost>>();
     builder.Services.AddScoped<IRepository<GuestBookEntry>, JsonRepository<GuestBookEntry>>();
     builder.Services.AddScoped<IRepository<ContactMethod>, JsonRepository<ContactMethod>>();
+    builder.Services.AddScoped<IRepository<FileUpload>, JsonRepository<FileUpload>>();
+    builder.Services.AddScoped<IRepository<PortfolioAttachment>, JsonRepository<PortfolioAttachment>>();
 }
 
 // Services
@@ -145,6 +154,8 @@ builder.Services.AddScoped<IWorkTaskService, WorkTaskService>();
 builder.Services.AddScoped<IBlogPostService, BlogPostService>();
 builder.Services.AddScoped<IGuestBookEntryService, GuestBookEntryService>();
 builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IPortfolioAttachmentService, PortfolioAttachmentService>();
 
 var app = builder.Build();
 
@@ -171,6 +182,16 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+
+// Static files for uploaded content
+var fileStoragePath = Path.Combine(app.Environment.ContentRootPath,
+    app.Configuration["FileStorage:RootPath"] ?? "files");
+Directory.CreateDirectory(fileStoragePath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(fileStoragePath),
+    RequestPath = "/files"
+});
 
 app.UseCors();
 app.UseAuthentication();

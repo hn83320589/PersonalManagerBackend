@@ -267,6 +267,31 @@ public static class MappingExtensions
         if (d.AdminReply != null) g.AdminReply = d.AdminReply;
     }
 
+    // ===== FileUpload =====
+    public static FileUploadResponse ToResponse(this FileUpload f) => new()
+    {
+        Id = f.Id, UserId = f.UserId, FileName = f.FileName, StoredName = f.StoredName,
+        FileUrl = f.FileUrl, FileType = f.FileType, FileSize = f.FileSize,
+        MimeType = f.MimeType, CreatedAt = f.CreatedAt
+    };
+
+    // ===== PortfolioAttachment =====
+    public static PortfolioAttachmentResponse ToResponse(this PortfolioAttachment a) => new()
+    {
+        Id = a.Id, PortfolioId = a.PortfolioId, FileUploadId = a.FileUploadId,
+        FileName = a.FileName, FileUrl = a.FileUrl, FileType = a.FileType,
+        FileSize = a.FileSize, SortOrder = a.SortOrder, CreatedAt = a.CreatedAt
+    };
+    public static PortfolioAttachment ToEntity(this CreatePortfolioAttachmentDto d) => new()
+    {
+        PortfolioId = d.PortfolioId, FileUploadId = d.FileUploadId, FileName = d.FileName,
+        FileUrl = d.FileUrl, FileType = d.FileType, FileSize = d.FileSize, SortOrder = d.SortOrder
+    };
+    public static void ApplyUpdate(this PortfolioAttachment a, UpdatePortfolioAttachmentDto d)
+    {
+        if (d.SortOrder.HasValue) a.SortOrder = d.SortOrder.Value;
+    }
+
     // ===== ContactMethod =====
     public static ContactMethodResponse ToResponse(this ContactMethod c) => new()
     {

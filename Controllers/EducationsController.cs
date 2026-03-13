@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EducationsController : ControllerBase
+public class EducationsController : BaseApiController
 {
     private readonly IEducationService _service;
     public EducationsController(IEducationService service) => _service = service;
@@ -34,12 +34,22 @@ public class EducationsController : ControllerBase
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateEducationDto dto)
-        => Ok(ApiResponse<EducationResponse>.Ok(await _service.CreateAsync(dto), "Education created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<EducationResponse>.Ok(await _service.CreateAsync(dto), "Education created"));
+    }
 
     [Authorize]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateEducationDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Education not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<EducationResponse>.Ok(item, "Education updated")) : NotFound(ApiResponse.Fail("Education not found"));
     }
@@ -47,5 +57,12 @@ public class EducationsController : ControllerBase
     [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Education deleted")) : NotFound(ApiResponse.Fail("Education not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Education not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Education deleted")) : NotFound(ApiResponse.Fail("Education not found"));
+    }
 }

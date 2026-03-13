@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ContactMethodsController : ControllerBase
+public class ContactMethodsController : BaseApiController
 {
     private readonly IContactMethodService _service;
     public ContactMethodsController(IContactMethodService service) => _service = service;
@@ -31,18 +31,38 @@ public class ContactMethodsController : ControllerBase
     public async Task<IActionResult> GetPublicByUserId(int userId)
         => Ok(ApiResponse<List<ContactMethodResponse>>.Ok(await _service.GetPublicByUserIdAsync(userId)));
 
-    [Authorize] [HttpPost]
+    [Authorize]
+    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateContactMethodDto dto)
-        => Ok(ApiResponse<ContactMethodResponse>.Ok(await _service.CreateAsync(dto), "Contact method created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<ContactMethodResponse>.Ok(await _service.CreateAsync(dto), "Contact method created"));
+    }
 
-    [Authorize] [HttpPut("{id}")]
+    [Authorize]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateContactMethodDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Contact method not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<ContactMethodResponse>.Ok(item, "Contact method updated")) : NotFound(ApiResponse.Fail("Contact method not found"));
     }
 
-    [Authorize] [HttpDelete("{id}")]
+    [Authorize]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Contact method deleted")) : NotFound(ApiResponse.Fail("Contact method not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Contact method not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Contact method deleted")) : NotFound(ApiResponse.Fail("Contact method not found"));
+    }
 }

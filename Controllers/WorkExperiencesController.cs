@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class WorkExperiencesController : ControllerBase
+public class WorkExperiencesController : BaseApiController
 {
     private readonly IWorkExperienceService _service;
     public WorkExperiencesController(IWorkExperienceService service) => _service = service;
@@ -31,18 +31,38 @@ public class WorkExperiencesController : ControllerBase
     public async Task<IActionResult> GetPublicByUserId(int userId)
         => Ok(ApiResponse<List<WorkExperienceResponse>>.Ok(await _service.GetPublicByUserIdAsync(userId)));
 
-    [Authorize] [HttpPost]
+    [Authorize]
+    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkExperienceDto dto)
-        => Ok(ApiResponse<WorkExperienceResponse>.Ok(await _service.CreateAsync(dto), "Work experience created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<WorkExperienceResponse>.Ok(await _service.CreateAsync(dto), "Work experience created"));
+    }
 
-    [Authorize] [HttpPut("{id}")]
+    [Authorize]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateWorkExperienceDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Work experience not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<WorkExperienceResponse>.Ok(item, "Work experience updated")) : NotFound(ApiResponse.Fail("Work experience not found"));
     }
 
-    [Authorize] [HttpDelete("{id}")]
+    [Authorize]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Work experience deleted")) : NotFound(ApiResponse.Fail("Work experience not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Work experience not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Work experience deleted")) : NotFound(ApiResponse.Fail("Work experience not found"));
+    }
 }

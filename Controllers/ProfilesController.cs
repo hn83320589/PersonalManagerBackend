@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProfilesController : ControllerBase
+public class ProfilesController : BaseApiController
 {
     private readonly IProfileService _service;
     private readonly IUserService _userService;
@@ -62,12 +62,22 @@ public class ProfilesController : ControllerBase
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProfileDto dto)
-        => Ok(ApiResponse<ProfileResponse>.Ok(await _service.CreateAsync(dto), "Profile created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<ProfileResponse>.Ok(await _service.CreateAsync(dto), "Profile created"));
+    }
 
     [Authorize]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProfileDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Profile not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<ProfileResponse>.Ok(item, "Profile updated")) : NotFound(ApiResponse.Fail("Profile not found"));
     }
@@ -75,5 +85,12 @@ public class ProfilesController : ControllerBase
     [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Profile deleted")) : NotFound(ApiResponse.Fail("Profile not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Profile not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Profile deleted")) : NotFound(ApiResponse.Fail("Profile not found"));
+    }
 }

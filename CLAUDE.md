@@ -334,6 +334,40 @@ Jwt__SecretKey = <隨機密鑰>
 
 ## 最新異動記錄
 
+### 2026/03/13
+- **EF Core Migrations 策略遷移**：
+  - 新增 `Data/DesignTimeDbContextFactory.cs` — 讓 `dotnet ef` 工具在 design-time 能建立 DbContext（無需真實 DB 連線）
+  - 新增 `Migrations/` 目錄：`20260313084338_InitialCreate.cs`（完整初始 schema）
+  - `Program.cs`：`db.Database.EnsureCreated()` 改為 `db.Database.Migrate()`
+  - **⚠️ 生產 DB 切換步驟**（Zeabur 已有資料的情況）：
+    ```sql
+    -- 登入生產 DB，執行以下 SQL 標記 migration 已套用（不重新建表）
+    CREATE TABLE IF NOT EXISTS `__EFMigrationsHistory` (
+        `MigrationId` varchar(150) NOT NULL,
+        `ProductVersion` varchar(32) NOT NULL,
+        PRIMARY KEY (`MigrationId`)
+    );
+    INSERT INTO `__EFMigrationsHistory` VALUES ('20260313084338_InitialCreate', '9.0.13');
+    ```
+  - 往後新增欄位：`dotnet ef migrations add <名稱>` → `dotnet ef database update`（或 Zeabur deploy 時自動 migrate）
+- **公開端點 Rate Limiting**：
+  - `Program.cs` 加入 `AddRateLimiter`（.NET 內建 `Microsoft.AspNetCore.RateLimiting`）
+  - 兩個 policy：`"auth"`（login/register）、`"public_write"`（guestbook POST），均為每 IP 每分鐘 10 次 fixed window
+  - 超過限制回傳 HTTP 429
+  - `AuthController.Login`、`AuthController.Register` 加 `[EnableRateLimiting("auth")]`
+  - `GuestBookEntriesController.Create` 加 `[EnableRateLimiting("public_write")]`
+  - `app.UseRateLimiter()` 加入 middleware pipeline（在 `UseAuthentication` 之前）
+- **資源所有權驗證（TD-02）**：
+  - 新增 `Controllers/BaseApiController.cs` — 抽象基底類別，提供 `GetCurrentUserId()` 從 JWT claim 取得當前用戶 ID
+  - 所有需要身份驗證的 Controller 改繼承 `BaseApiController`（替代 `ControllerBase`）
+  - 修復 `TodoItemsController.GetAll()`、`WorkTasksController.GetAll()`：原本回傳所有用戶資料，現在只回傳當前用戶自己的資料
+  - 以下 Controller 的 Create/Update/Delete 全部加入所有權驗證：
+    - `SkillsController`、`EducationsController`、`WorkExperiencesController`、`PortfoliosController`
+    - `CalendarEventsController`、`BlogPostsController`、`TodoItemsController`、`WorkTasksController`
+    - `ContactMethodsController`、`ProfilesController`
+  - `GuestBookEntriesController`：Update/Delete 驗證 `TargetUserId == currentUserId`；`GetAll` 改為只回傳當前用戶 guestbook 的所有留言（含未審核）
+  - Create 端點：強制 `dto.UserId = currentUserId.Value`，不信任 client 傳入的 UserId
+
 ### 2026/03/12
 - **檔案管理系統**：
   - 新增 `Settings/FileStorageSettings.cs`（RootPath、MaxFileSizeMB、AllowedExtensions）

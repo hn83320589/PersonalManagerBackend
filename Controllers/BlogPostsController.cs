@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class BlogPostsController : ControllerBase
+public class BlogPostsController : BaseApiController
 {
     private readonly IBlogPostService _service;
     public BlogPostsController(IBlogPostService service) => _service = service;
@@ -66,18 +66,38 @@ public class BlogPostsController : ControllerBase
         return Ok(ApiResponse<List<string>>.Ok(tags));
     }
 
-    [Authorize] [HttpPost]
+    [Authorize]
+    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBlogPostDto dto)
-        => Ok(ApiResponse<BlogPostResponse>.Ok(await _service.CreateAsync(dto), "Blog post created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<BlogPostResponse>.Ok(await _service.CreateAsync(dto), "Blog post created"));
+    }
 
-    [Authorize] [HttpPut("{id}")]
+    [Authorize]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateBlogPostDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Blog post not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<BlogPostResponse>.Ok(item, "Blog post updated")) : NotFound(ApiResponse.Fail("Blog post not found"));
     }
 
-    [Authorize] [HttpDelete("{id}")]
+    [Authorize]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Blog post deleted")) : NotFound(ApiResponse.Fail("Blog post not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Blog post not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Blog post deleted")) : NotFound(ApiResponse.Fail("Blog post not found"));
+    }
 }

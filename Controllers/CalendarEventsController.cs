@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CalendarEventsController : ControllerBase
+public class CalendarEventsController : BaseApiController
 {
     private readonly ICalendarEventService _service;
     public CalendarEventsController(ICalendarEventService service) => _service = service;
@@ -37,18 +37,38 @@ public class CalendarEventsController : ControllerBase
     public async Task<IActionResult> GetByDateRange(int userId, [FromQuery] DateTime start, [FromQuery] DateTime end)
         => Ok(ApiResponse<List<CalendarEventResponse>>.Ok(await _service.GetByDateRangeAsync(userId, start, end)));
 
-    [Authorize] [HttpPost]
+    [Authorize]
+    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCalendarEventDto dto)
-        => Ok(ApiResponse<CalendarEventResponse>.Ok(await _service.CreateAsync(dto), "Event created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<CalendarEventResponse>.Ok(await _service.CreateAsync(dto), "Event created"));
+    }
 
-    [Authorize] [HttpPut("{id}")]
+    [Authorize]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCalendarEventDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Event not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<CalendarEventResponse>.Ok(item, "Event updated")) : NotFound(ApiResponse.Fail("Event not found"));
     }
 
-    [Authorize] [HttpDelete("{id}")]
+    [Authorize]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Event deleted")) : NotFound(ApiResponse.Fail("Event not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Event not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Event deleted")) : NotFound(ApiResponse.Fail("Event not found"));
+    }
 }

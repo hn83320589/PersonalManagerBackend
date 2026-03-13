@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PortfoliosController : ControllerBase
+public class PortfoliosController : BaseApiController
 {
     private readonly IPortfolioService _service;
     public PortfoliosController(IPortfolioService service) => _service = service;
@@ -35,18 +35,38 @@ public class PortfoliosController : ControllerBase
     public async Task<IActionResult> GetFeatured(int userId)
         => Ok(ApiResponse<List<PortfolioResponse>>.Ok(await _service.GetFeaturedAsync(userId)));
 
-    [Authorize] [HttpPost]
+    [Authorize]
+    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePortfolioDto dto)
-        => Ok(ApiResponse<PortfolioResponse>.Ok(await _service.CreateAsync(dto), "Portfolio created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<PortfolioResponse>.Ok(await _service.CreateAsync(dto), "Portfolio created"));
+    }
 
-    [Authorize] [HttpPut("{id}")]
+    [Authorize]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdatePortfolioDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Portfolio not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<PortfolioResponse>.Ok(item, "Portfolio updated")) : NotFound(ApiResponse.Fail("Portfolio not found"));
     }
 
-    [Authorize] [HttpDelete("{id}")]
+    [Authorize]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Portfolio deleted")) : NotFound(ApiResponse.Fail("Portfolio not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Portfolio not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Portfolio deleted")) : NotFound(ApiResponse.Fail("Portfolio not found"));
+    }
 }

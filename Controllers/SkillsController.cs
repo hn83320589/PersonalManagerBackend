@@ -7,7 +7,7 @@ namespace PersonalManager.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SkillsController : ControllerBase
+public class SkillsController : BaseApiController
 {
     private readonly ISkillService _service;
     public SkillsController(ISkillService service) => _service = service;
@@ -35,18 +35,38 @@ public class SkillsController : ControllerBase
     public async Task<IActionResult> GetByCategory(int userId, string category)
         => Ok(ApiResponse<List<SkillResponse>>.Ok(await _service.GetByCategoryAsync(userId, category)));
 
-    [Authorize] [HttpPost]
+    [Authorize]
+    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateSkillDto dto)
-        => Ok(ApiResponse<SkillResponse>.Ok(await _service.CreateAsync(dto), "Skill created"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        dto.UserId = currentUserId.Value;
+        return Ok(ApiResponse<SkillResponse>.Ok(await _service.CreateAsync(dto), "Skill created"));
+    }
 
-    [Authorize] [HttpPut("{id}")]
+    [Authorize]
+    [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateSkillDto dto)
     {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Skill not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
         var item = await _service.UpdateAsync(id, dto);
         return item != null ? Ok(ApiResponse<SkillResponse>.Ok(item, "Skill updated")) : NotFound(ApiResponse.Fail("Skill not found"));
     }
 
-    [Authorize] [HttpDelete("{id}")]
+    [Authorize]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
-        => await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Skill deleted")) : NotFound(ApiResponse.Fail("Skill not found"));
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
+        var existing = await _service.GetByIdAsync(id);
+        if (existing == null) return NotFound(ApiResponse.Fail("Skill not found"));
+        if (existing.UserId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
+        return await _service.DeleteAsync(id) ? Ok(ApiResponse.Ok("Skill deleted")) : NotFound(ApiResponse.Fail("Skill not found"));
+    }
 }

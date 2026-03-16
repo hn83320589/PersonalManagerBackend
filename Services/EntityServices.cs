@@ -269,6 +269,8 @@ public interface IBlogPostService : ICrudService<BlogPost, CreateBlogPostDto, Up
     Task<List<BlogPostResponse>> GetPublicByUserIdAsync(int userId);
     Task<List<BlogPostResponse>> GetPublishedAsync();
     Task<BlogPostResponse?> GetBySlugAsync(string slug);
+    Task IncrementViewCountAsync(int id);
+    Task<PagedResult<BlogPostResponse>> GetPublicPagedAsync(int userId, int page, int pageSize, string? keyword, string? tag, string? category);
 }
 
 public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBlogPostDto, BlogPostResponse>, IBlogPostService
@@ -320,6 +322,43 @@ public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBl
         return items.FirstOrDefault()?.ToResponse();
     }
 
+    public async Task IncrementViewCountAsync(int id)
+    {
+        var entity = await Repository.GetByIdAsync(id);
+        if (entity == null) return;
+        entity.ViewCount++;
+        await Repository.UpdateAsync(entity);
+    }
+
+    public async Task<PagedResult<BlogPostResponse>> GetPublicPagedAsync(int userId, int page, int pageSize, string? keyword, string? tag, string? category)
+    {
+        var items = await Repository.FindAsync(b => b.UserId == userId && b.Status == BlogPostStatus.Published && b.IsPublic);
+        IEnumerable<BlogPost> query = items.OrderByDescending(b => b.PublishedAt);
+
+        if (!string.IsNullOrEmpty(keyword))
+        {
+            var kw = keyword.ToLowerInvariant();
+            query = query.Where(b =>
+                b.Title.ToLowerInvariant().Contains(kw) ||
+                (b.Content?.ToLowerInvariant().Contains(kw) ?? false) ||
+                (b.Tags?.ToLowerInvariant().Contains(kw) ?? false) ||
+                (b.Summary?.ToLowerInvariant().Contains(kw) ?? false));
+        }
+        if (!string.IsNullOrEmpty(tag))
+            query = query.Where(b => b.Tags != null && b.Tags.Split(',').Select(t => t.Trim()).Contains(tag, StringComparer.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(category))
+            query = query.Where(b => b.Category != null && b.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+
+        var filtered = query.ToList();
+        return new PagedResult<BlogPostResponse>
+        {
+            Items = filtered.Skip((page - 1) * pageSize).Take(pageSize).Select(MapToResponse).ToList(),
+            TotalCount = filtered.Count,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
     private static string GenerateSlug(string title)
     {
         var slug = title.ToLowerInvariant()
@@ -343,14 +382,12 @@ public interface IFileUploadService
 public class FileUploadService : IFileUploadService
 {
     private readonly IRepository<FileUpload> _repo;
-    private readonly FileStorageSettings _settings;
-    private readonly string _rootPath;
+    private readonly IFileStorageProvider _storage;
 
-    public FileUploadService(IRepository<FileUpload> repo, IOptions<FileStorageSettings> settings, IWebHostEnvironment env)
+    public FileUploadService(IRepository<FileUpload> repo, IFileStorageProvider storage)
     {
         _repo = repo;
-        _settings = settings.Value;
-        _rootPath = Path.Combine(env.ContentRootPath, _settings.RootPath);
+        _storage = storage;
     }
 
     public async Task<List<FileUploadResponse>> GetByUserIdAsync(int userId)
@@ -362,14 +399,7 @@ public class FileUploadService : IFileUploadService
     public async Task<FileUploadResponse> UploadAsync(IFormFile file, int userId)
     {
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var storedName = $"{Guid.NewGuid()}{ext}";
-        var filePath = Path.Combine(_rootPath, storedName);
-
-        Directory.CreateDirectory(_rootPath);
-        using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
+        var (fileUrl, storedName) = await _storage.UploadAsync(file, ext);
 
         var fileType = ext switch
         {
@@ -385,7 +415,7 @@ public class FileUploadService : IFileUploadService
             UserId = userId,
             FileName = file.FileName,
             StoredName = storedName,
-            FileUrl = $"/files/{storedName}",
+            FileUrl = fileUrl,
             FileType = fileType,
             FileSize = file.Length,
             MimeType = file.ContentType,
@@ -402,9 +432,7 @@ public class FileUploadService : IFileUploadService
         var entity = items.FirstOrDefault();
         if (entity == null) return false;
 
-        var filePath = Path.Combine(_rootPath, entity.StoredName);
-        if (File.Exists(filePath)) File.Delete(filePath);
-
+        await _storage.DeleteAsync(entity.StoredName);
         return await _repo.DeleteAsync(id);
     }
 }
@@ -434,6 +462,7 @@ public interface IGuestBookEntryService : ICrudService<GuestBookEntry, CreateGue
 {
     Task<List<GuestBookEntryResponse>> GetApprovedAsync();
     Task<List<GuestBookEntryResponse>> GetApprovedByTargetUserIdAsync(int targetUserId);
+    Task<PagedResult<GuestBookEntryResponse>> GetApprovedPagedAsync(int targetUserId, int page, int pageSize);
 }
 
 public class GuestBookEntryService : CrudService<GuestBookEntry, CreateGuestBookEntryDto, UpdateGuestBookEntryDto, GuestBookEntryResponse>, IGuestBookEntryService
@@ -453,6 +482,19 @@ public class GuestBookEntryService : CrudService<GuestBookEntry, CreateGuestBook
     {
         var items = await Repository.FindAsync(g => g.TargetUserId == targetUserId && g.IsApproved);
         return items.OrderByDescending(g => g.CreatedAt).Select(MapToResponse).ToList();
+    }
+
+    public async Task<PagedResult<GuestBookEntryResponse>> GetApprovedPagedAsync(int targetUserId, int page, int pageSize)
+    {
+        var items = await Repository.FindAsync(g => g.TargetUserId == targetUserId && g.IsApproved);
+        var ordered = items.OrderByDescending(g => g.CreatedAt).ToList();
+        return new PagedResult<GuestBookEntryResponse>
+        {
+            Items = ordered.Skip((page - 1) * pageSize).Take(pageSize).Select(MapToResponse).ToList(),
+            TotalCount = ordered.Count,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 }
 
@@ -480,5 +522,25 @@ public class ContactMethodService : CrudService<ContactMethod, CreateContactMeth
     {
         var items = await Repository.FindAsync(c => c.UserId == userId && c.IsPublic);
         return items.OrderBy(c => c.SortOrder).Select(MapToResponse).ToList();
+    }
+}
+
+// ===== TimeEntry Service =====
+public interface ITimeEntryService : ICrudService<TimeEntry, CreateTimeEntryDto, UpdateTimeEntryDto, TimeEntryResponse>
+{
+    Task<List<TimeEntryResponse>> GetByUserIdAsync(int userId);
+}
+
+public class TimeEntryService : CrudService<TimeEntry, CreateTimeEntryDto, UpdateTimeEntryDto, TimeEntryResponse>, ITimeEntryService
+{
+    public TimeEntryService(IRepository<TimeEntry> repo) : base(repo) { }
+    protected override TimeEntry MapToEntity(CreateTimeEntryDto dto) => dto.ToEntity();
+    protected override TimeEntryResponse MapToResponse(TimeEntry entity) => entity.ToResponse();
+    protected override void ApplyUpdate(TimeEntry entity, UpdateTimeEntryDto dto) => entity.ApplyUpdate(dto);
+
+    public async Task<List<TimeEntryResponse>> GetByUserIdAsync(int userId)
+    {
+        var items = await Repository.FindAsync(t => t.UserId == userId);
+        return items.OrderByDescending(t => t.Date).ThenByDescending(t => t.CreatedAt).Select(MapToResponse).ToList();
     }
 }

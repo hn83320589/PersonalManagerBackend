@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +50,27 @@ builder.Services.AddSwaggerGen(c =>
 
 // FileStorage settings
 builder.Services.Configure<FileStorageSettings>(builder.Configuration.GetSection("FileStorage"));
+
+// File storage provider: S3-compatible (production) or local disk (dev)
+var s3Config = builder.Configuration.GetSection("FileStorage:S3").Get<S3StorageSettings>();
+if (s3Config?.IsConfigured == true)
+{
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+        new BasicAWSCredentials(s3Config.AccessKey, s3Config.SecretKey),
+        new AmazonS3Config
+        {
+            ServiceURL = s3Config.ServiceUrl,
+            ForcePathStyle = s3Config.ForcePathStyle,
+        }
+    ));
+    builder.Services.AddScoped<IFileStorageProvider, S3FileStorageProvider>();
+    Console.WriteLine("檔案儲存: S3-compatible Object Storage");
+}
+else
+{
+    builder.Services.AddScoped<IFileStorageProvider, LocalFileStorageProvider>();
+    Console.WriteLine("檔案儲存: 本地磁碟（dev fallback）");
+}
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
@@ -152,6 +175,8 @@ if (useDatabase)
     builder.Services.AddScoped<IRepository<ContactMethod>, EfRepository<ContactMethod>>();
     builder.Services.AddScoped<IRepository<FileUpload>, EfRepository<FileUpload>>();
     builder.Services.AddScoped<IRepository<PortfolioAttachment>, EfRepository<PortfolioAttachment>>();
+    builder.Services.AddScoped<IRepository<TimeEntry>, EfRepository<TimeEntry>>();
+    builder.Services.AddScoped<IRepository<RefreshToken>, EfRepository<RefreshToken>>();
 }
 else
 {
@@ -170,6 +195,8 @@ else
     builder.Services.AddScoped<IRepository<ContactMethod>, JsonRepository<ContactMethod>>();
     builder.Services.AddScoped<IRepository<FileUpload>, JsonRepository<FileUpload>>();
     builder.Services.AddScoped<IRepository<PortfolioAttachment>, JsonRepository<PortfolioAttachment>>();
+    builder.Services.AddScoped<IRepository<TimeEntry>, JsonRepository<TimeEntry>>();
+    builder.Services.AddScoped<IRepository<RefreshToken>, JsonRepository<RefreshToken>>();
 }
 
 // Services
@@ -188,6 +215,12 @@ builder.Services.AddScoped<IGuestBookEntryService, GuestBookEntryService>();
 builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<IPortfolioAttachmentService, PortfolioAttachmentService>();
+builder.Services.AddScoped<ITimeEntryService, TimeEntryService>();
+
+// Health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("API is running"))
+    .AddCheck<DbHealthCheck>("database");
 
 var app = builder.Build();
 
@@ -230,5 +263,23 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/api/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (ctx, report) =>
+    {
+        ctx.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            })
+        });
+        await ctx.Response.WriteAsync(result);
+    }
+});
 
 app.Run();

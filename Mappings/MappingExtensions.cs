@@ -312,4 +312,33 @@ public static class MappingExtensions
         if (d.IsPublic.HasValue) c.IsPublic = d.IsPublic.Value;
         if (d.SortOrder.HasValue) c.SortOrder = d.SortOrder.Value;
     }
+
+    // ===== TimeEntry =====
+    public static TimeEntryResponse ToResponse(this TimeEntry t) => new()
+    {
+        Id = t.Id, UserId = t.UserId, WorkTaskId = t.WorkTaskId,
+        Task = t.Task, Project = t.Project, Date = t.Date,
+        StartTime = t.StartTime, EndTime = t.EndTime,
+        Duration = t.Duration, Description = t.Description,
+        CreatedAt = t.CreatedAt, UpdatedAt = t.UpdatedAt
+    };
+    public static TimeEntry ToEntity(this CreateTimeEntryDto d) => new()
+    {
+        UserId = d.UserId, WorkTaskId = d.WorkTaskId,
+        Task = d.Task, Project = d.Project, Date = d.Date,
+        StartTime = d.StartTime, EndTime = d.EndTime,
+        Duration = d.Duration, Description = d.Description
+    };
+    public static void ApplyUpdate(this TimeEntry t, UpdateTimeEntryDto d)
+    {
+        if (d.WorkTaskId.HasValue) t.WorkTaskId = d.WorkTaskId;
+        if (d.Task != null) t.Task = d.Task;
+        if (d.Project != null) t.Project = d.Project;
+        if (d.Date != null) t.Date = d.Date;
+        if (d.StartTime != null) t.StartTime = d.StartTime;
+        if (d.EndTime != null) t.EndTime = d.EndTime;
+        if (d.Duration.HasValue) t.Duration = d.Duration.Value;
+        if (d.Description != null) t.Description = d.Description;
+        t.UpdatedAt = DateTime.UtcNow;
+    }
 }

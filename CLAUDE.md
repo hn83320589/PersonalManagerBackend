@@ -334,6 +334,57 @@ Jwt__SecretKey = <隨機密鑰>
 
 ## 最新異動記錄
 
+### 2026/03/16（單元測試）
+- **後端單元測試專案建立**：
+  - 新增 `tests/PersonalManager.Tests.csproj`（xUnit 2.9.3 + Moq 4.20.72，引用主專案）
+  - 新增 `tests/GlobalUsings.cs`（`global using Xunit`）
+  - `tests/AuthServiceTests.cs`：10 個測試覆蓋 `LoginAsync`（有效/錯誤密碼/用戶不存在）、`RegisterAsync`（新用戶/重複用戶名）、`RefreshAsync`（有效/過期/已撤銷/不存在）、`RevokeAsync`（有效/不存在）
+  - `tests/BlogPostServiceTests.cs`：10 個測試覆蓋 `GetPublicByUserIdAsync`、`GetBySlugAsync`、`GetPublicPagedAsync`（分頁/關鍵字/分類/標籤過濾）、`IncrementViewCountAsync`
+  - `tests/GuestBookEntryServiceTests.cs`：9 個測試覆蓋 `GetApprovedByTargetUserIdAsync`（過濾/排序）、`GetApprovedPagedAsync`（分頁/排除未審核/空結果）
+  - 共 29 個測試，全部通過（`dotnet test`）
+  - 執行：`cd tests && dotnet test`
+
+### 2026/03/16（SEO + Object Storage）
+- **Object Storage 抽象層（TD-05）**：
+  - 新增 NuGet `AWSSDK.S3` v3.7.414.3
+  - `Settings/FileStorageSettings.cs` 新增 `S3StorageSettings`（BucketName、ServiceUrl、AccessKey、SecretKey、PublicBaseUrl、ForcePathStyle）
+  - 新增 `Services/FileStorageProviders.cs`：`IFileStorageProvider` 介面 + `LocalFileStorageProvider`（現有本地行為）+ `S3FileStorageProvider`（S3-compatible）
+  - `Services/EntityServices.cs`：`FileUploadService` 改注入 `IFileStorageProvider`，移除直接 File I/O 邏輯
+  - `Program.cs`：啟動時讀取 `FileStorage:S3` 設定 → 若 IsConfigured 則用 S3，否則用本地磁碟
+  - `appsettings.json`：新增 `FileStorage.S3` section（空占位符）
+  - **Zeabur 生產環境變數**：`FileStorage__S3__BucketName`、`FileStorage__S3__ServiceUrl`（e.g. `https://xxxx.s3.us-east-1.amazonaws.com`）、`FileStorage__S3__AccessKey`、`FileStorage__S3__SecretKey`、`FileStorage__S3__PublicBaseUrl`（公開存取 URL）
+
+### 2026/03/16（分頁 + 搜尋）
+- **分頁（Pagination）**：
+  - `DTOs/ApiResponse.cs` 新增 `PagedResult<T>`（Items、TotalCount、Page、PageSize、TotalPages、HasPreviousPage、HasNextPage）
+  - `IBlogPostService` / `BlogPostService` 新增 `GetPublicPagedAsync(userId, page, pageSize, keyword?, tag?, category?)`
+  - `IGuestBookEntryService` / `GuestBookEntryService` 新增 `GetApprovedPagedAsync(targetUserId, page, pageSize)`
+  - `BlogPostsController` 新增 `GET /api/blogposts/user/{userId}/categories` 端點
+  - `BlogPostsController` 新增 `GET /api/blogposts/user/{userId}/public/paged?page=1&pageSize=8&keyword=&tag=&category=` 端點
+  - `GuestBookEntriesController` 新增 `GET /api/guestbookentries/user/{targetUserId}/paged?page=1&pageSize=10` 端點
+
+### 2026/03/16
+- **Refresh Token 機制（TD-04）**：
+  - 新增 `Models/RefreshToken.cs`（UserId、Token、ExpiresAt、IsRevoked）
+  - `DTOs/AuthDtos.cs`：`AuthResponse` 加 `RefreshToken`/`RefreshTokenExpiresAt`；新增 `RefreshRequest`
+  - `Data/ApplicationDbContext.cs` 加 `DbSet<RefreshToken>`
+  - `Auth/AuthService.cs`：`GenerateAuthResponse` 改為 async，登入/註冊時生成並持久化 refresh token（7 天）；新增 `RefreshAsync`（換新 token pair）、`RevokeAsync`
+  - `Controllers/AuthController.cs`：新增 `POST /api/auth/refresh`（無需認證）、`POST /api/auth/logout`（撤銷 refresh token）
+  - `dotnet ef migrations add AddRefreshToken` — 新增 migration
+- **TimeEntry API 實作（TD-01）**：
+  - 新增 `Models/TimeEntry.cs`（UserId、WorkTaskId?、Task、Project、Date、StartTime?、EndTime?、Duration、Description）
+  - `DTOs/EntityDtos.cs` 新增 Create/Update/Response DTOs
+  - `Mappings/MappingExtensions.cs` 新增 TimeEntry 映射
+  - `Data/ApplicationDbContext.cs` 新增 `DbSet<TimeEntry>`
+  - `Data/JsonData/TimeEntries.json` 新增（空陣列，JSON fallback 用）
+  - `Services/EntityServices.cs` 新增 `ITimeEntryService`/`TimeEntryService`
+  - `Program.cs` 新增 DI 注冊（EF + JSON 兩個區塊）
+  - 新增 `Controllers/TimeEntriesController.cs`（全部端點需 auth，所有權驗證）
+  - `dotnet ef migrations add AddTimeEntry` — 新增 migration
+- **文章瀏覽計數（ViewCount）**：
+  - `IBlogPostService` / `BlogPostService` 新增 `IncrementViewCountAsync(int id)` 方法
+  - `BlogPostsController` 新增 `POST /api/blogposts/{id}/view` 公開端點（無需認證）
+
 ### 2026/03/13
 - **EF Core Migrations 策略遷移**：
   - 新增 `Data/DesignTimeDbContextFactory.cs` — 讓 `dotnet ef` 工具在 design-time 能建立 DbContext（無需真實 DB 連線）

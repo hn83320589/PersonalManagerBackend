@@ -21,6 +21,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ContactMethod> ContactMethods => Set<ContactMethod>();
     public DbSet<FileUpload> FileUploads => Set<FileUpload>();
     public DbSet<PortfolioAttachment> PortfolioAttachments => Set<PortfolioAttachment>();
+    public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

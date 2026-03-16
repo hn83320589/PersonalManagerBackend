@@ -52,6 +52,13 @@ public class BlogPostsController : BaseApiController
         return Ok(ApiResponse<List<BlogPostResponse>>.Ok(posts));
     }
 
+    [HttpPost("{id}/view")]
+    public async Task<IActionResult> IncrementView(int id)
+    {
+        await _service.IncrementViewCountAsync(id);
+        return Ok(ApiResponse.Ok("View counted"));
+    }
+
     [HttpGet("user/{userId}/tags")]
     public async Task<IActionResult> GetTagsByUserId(int userId)
     {
@@ -64,6 +71,32 @@ public class BlogPostsController : BaseApiController
             .OrderBy(t => t)
             .ToList();
         return Ok(ApiResponse<List<string>>.Ok(tags));
+    }
+
+    [HttpGet("user/{userId}/categories")]
+    public async Task<IActionResult> GetCategoriesByUserId(int userId)
+    {
+        var posts = await _service.GetPublicByUserIdAsync(userId);
+        var categories = posts
+            .Where(p => !string.IsNullOrEmpty(p.Category))
+            .Select(p => p.Category!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+        return Ok(ApiResponse<List<string>>.Ok(categories));
+    }
+
+    [HttpGet("user/{userId}/public/paged")]
+    public async Task<IActionResult> GetPublicByUserIdPaged(
+        int userId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 8,
+        [FromQuery] string? keyword = null,
+        [FromQuery] string? tag = null,
+        [FromQuery] string? category = null)
+    {
+        var result = await _service.GetPublicPagedAsync(userId, Math.Max(1, page), Math.Clamp(pageSize, 1, 50), keyword, tag, category);
+        return Ok(ApiResponse<PagedResult<BlogPostResponse>>.Ok(result));
     }
 
     [Authorize]

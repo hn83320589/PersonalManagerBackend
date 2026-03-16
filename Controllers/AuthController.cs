@@ -44,4 +44,20 @@ public class AuthController : ControllerBase
         if (user == null) return NotFound(ApiResponse.Fail("User not found"));
         return Ok(ApiResponse<UserResponse>.Ok(user));
     }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    {
+        var result = await _auth.RefreshAsync(request.RefreshToken);
+        if (result == null)
+            return Unauthorized(ApiResponse.Fail("Invalid or expired refresh token"));
+        return Ok(ApiResponse<AuthResponse>.Ok(result, "Token refreshed"));
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshRequest request)
+    {
+        await _auth.RevokeAsync(request.RefreshToken);
+        return Ok(ApiResponse.Ok("Logged out"));
+    }
 }

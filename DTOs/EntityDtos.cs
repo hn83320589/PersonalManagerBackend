@@ -486,3 +486,43 @@ public class ContactMethodResponse
     public bool IsPublic { get; set; }
     public int SortOrder { get; set; }
 }
+
+// ===== TimeEntry =====
+public class CreateTimeEntryDto
+{
+    public int UserId { get; set; }
+    public int? WorkTaskId { get; set; }
+    [Required] public string Task { get; set; } = string.Empty;
+    public string Project { get; set; } = string.Empty;
+    [Required] public string Date { get; set; } = string.Empty;
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public int Duration { get; set; }
+    public string Description { get; set; } = string.Empty;
+}
+public class UpdateTimeEntryDto
+{
+    public int? WorkTaskId { get; set; }
+    public string? Task { get; set; }
+    public string? Project { get; set; }
+    public string? Date { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public int? Duration { get; set; }
+    public string? Description { get; set; }
+}
+public class TimeEntryResponse
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public int? WorkTaskId { get; set; }
+    public string Task { get; set; } = string.Empty;
+    public string Project { get; set; } = string.Empty;
+    public string Date { get; set; } = string.Empty;
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public int Duration { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}

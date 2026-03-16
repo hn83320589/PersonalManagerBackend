@@ -21,6 +21,16 @@ public class GuestBookEntriesController : BaseApiController
     public async Task<IActionResult> GetApprovedByUser(int targetUserId)
         => Ok(ApiResponse<List<GuestBookEntryResponse>>.Ok(await _service.GetApprovedByTargetUserIdAsync(targetUserId)));
 
+    [HttpGet("user/{targetUserId}/paged")]
+    public async Task<IActionResult> GetApprovedByUserPaged(
+        int targetUserId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var result = await _service.GetApprovedPagedAsync(targetUserId, Math.Max(1, page), Math.Clamp(pageSize, 1, 50));
+        return Ok(ApiResponse<PagedResult<GuestBookEntryResponse>>.Ok(result));
+    }
+
     [Authorize]
     [HttpGet("all")]
     public async Task<IActionResult> GetAll()

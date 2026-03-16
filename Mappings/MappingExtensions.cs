@@ -154,13 +154,14 @@ public static class MappingExtensions
     {
         Id = c.Id, UserId = c.UserId, Title = c.Title, Description = c.Description,
         StartTime = c.StartTime, EndTime = c.EndTime, IsAllDay = c.IsAllDay,
-        IsPublic = c.IsPublic, Color = c.Color, CreatedAt = c.CreatedAt
+        IsPublic = c.IsPublic, Color = c.Color, RecurrenceRule = c.RecurrenceRule,
+        CreatedAt = c.CreatedAt
     };
     public static CalendarEvent ToEntity(this CreateCalendarEventDto d) => new()
     {
         UserId = d.UserId, Title = d.Title, Description = d.Description,
         StartTime = d.StartTime, EndTime = d.EndTime, IsAllDay = d.IsAllDay,
-        IsPublic = d.IsPublic, Color = d.Color
+        IsPublic = d.IsPublic, Color = d.Color, RecurrenceRule = d.RecurrenceRule
     };
     public static void ApplyUpdate(this CalendarEvent c, UpdateCalendarEventDto d)
     {
@@ -171,6 +172,7 @@ public static class MappingExtensions
         if (d.IsAllDay.HasValue) c.IsAllDay = d.IsAllDay.Value;
         if (d.IsPublic.HasValue) c.IsPublic = d.IsPublic.Value;
         if (d.Color != null) c.Color = d.Color;
+        if (d.RecurrenceRule != null) c.RecurrenceRule = d.RecurrenceRule;
     }
 
     // ===== TodoItem =====
@@ -196,10 +198,11 @@ public static class MappingExtensions
     }
 
     // ===== WorkTask =====
-    public static WorkTaskResponse ToResponse(this WorkTask w) => new()
+    public static WorkTaskResponse ToResponse(this WorkTask w, string? projectName = null) => new()
     {
         Id = w.Id, UserId = w.UserId, Title = w.Title, Description = w.Description,
-        Project = w.Project, Priority = w.Priority, Status = w.Status,
+        ProjectId = w.ProjectId, ProjectName = projectName,
+        Priority = w.Priority, Status = w.Status,
         EstimatedHours = w.EstimatedHours, ActualHours = w.ActualHours,
         DueDate = w.DueDate, CompletedAt = w.CompletedAt, Tags = w.Tags,
         CreatedAt = w.CreatedAt, UpdatedAt = w.UpdatedAt
@@ -207,14 +210,14 @@ public static class MappingExtensions
     public static WorkTask ToEntity(this CreateWorkTaskDto d) => new()
     {
         UserId = d.UserId, Title = d.Title, Description = d.Description,
-        Project = d.Project, Priority = d.Priority, Status = d.Status,
+        ProjectId = d.ProjectId, Priority = d.Priority, Status = d.Status,
         EstimatedHours = d.EstimatedHours, DueDate = d.DueDate, Tags = d.Tags
     };
     public static void ApplyUpdate(this WorkTask w, UpdateWorkTaskDto d)
     {
         if (d.Title != null) w.Title = d.Title;
         if (d.Description != null) w.Description = d.Description;
-        if (d.Project != null) w.Project = d.Project;
+        if (d.ProjectId.HasValue) w.ProjectId = d.ProjectId;
         if (d.Priority.HasValue) w.Priority = d.Priority.Value;
         if (d.Status.HasValue) w.Status = d.Status.Value;
         if (d.EstimatedHours.HasValue) w.EstimatedHours = d.EstimatedHours.Value;
@@ -224,19 +227,43 @@ public static class MappingExtensions
         if (d.Tags != null) w.Tags = d.Tags;
     }
 
+    // ===== Project =====
+    public static ProjectResponse ToResponse(this Project p) => new()
+    {
+        Id = p.Id, UserId = p.UserId, Name = p.Name, Description = p.Description,
+        Color = p.Color, SortOrder = p.SortOrder, CreatedAt = p.CreatedAt, UpdatedAt = p.UpdatedAt
+    };
+    public static Project ToEntity(this CreateProjectDto d) => new()
+    {
+        UserId = d.UserId, Name = d.Name, Description = d.Description,
+        Color = d.Color, SortOrder = d.SortOrder
+    };
+    public static void ApplyUpdate(this Project p, UpdateProjectDto d)
+    {
+        if (d.Name != null) p.Name = d.Name;
+        if (d.Description != null) p.Description = d.Description;
+        if (d.Color != null) p.Color = d.Color;
+        if (d.SortOrder.HasValue) p.SortOrder = d.SortOrder.Value;
+    }
+
     // ===== BlogPost =====
     public static BlogPostResponse ToResponse(this BlogPost b) => new()
     {
         Id = b.Id, UserId = b.UserId, Title = b.Title, Slug = b.Slug,
         Content = b.Content, Summary = b.Summary, Category = b.Category,
-        Tags = b.Tags, Status = b.Status, IsPublic = b.IsPublic,
+        // Use normalized TagEntities if available; fall back to legacy comma-separated string
+        Tags = b.TagEntities.Any()
+            ? b.TagEntities.Select(t => t.Name).ToList()
+            : (string.IsNullOrEmpty(b.Tags) ? new() : b.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToList()),
+        Status = b.Status, IsPublic = b.IsPublic,
         ViewCount = b.ViewCount, PublishedAt = b.PublishedAt,
         CreatedAt = b.CreatedAt, UpdatedAt = b.UpdatedAt
     };
     public static BlogPost ToEntity(this CreateBlogPostDto d) => new()
     {
         UserId = d.UserId, Title = d.Title, Content = d.Content,
-        Summary = d.Summary, Category = d.Category, Tags = d.Tags,
+        Summary = d.Summary, Category = d.Category,
+        Tags = string.Join(",", d.Tags ?? []),  // legacy string for JSON fallback
         Status = d.Status, IsPublic = d.IsPublic
     };
     public static void ApplyUpdate(this BlogPost b, UpdateBlogPostDto d)
@@ -245,7 +272,7 @@ public static class MappingExtensions
         if (d.Content != null) b.Content = d.Content;
         if (d.Summary != null) b.Summary = d.Summary;
         if (d.Category != null) b.Category = d.Category;
-        if (d.Tags != null) b.Tags = d.Tags;
+        if (d.Tags != null) b.Tags = string.Join(",", d.Tags);  // legacy string for JSON fallback
         if (d.Status.HasValue) b.Status = d.Status.Value;
         if (d.IsPublic.HasValue) b.IsPublic = d.IsPublic.Value;
         if (d.PublishedAt.HasValue) b.PublishedAt = d.PublishedAt;

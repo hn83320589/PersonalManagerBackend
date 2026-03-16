@@ -228,37 +228,77 @@ public class TodoItemService : CrudService<TodoItem, CreateTodoItemDto, UpdateTo
     }
 }
 
+// ===== Project Service =====
+public interface IProjectService : ICrudService<Project, CreateProjectDto, UpdateProjectDto, ProjectResponse>
+{
+    Task<List<ProjectResponse>> GetByUserIdAsync(int userId);
+}
+
+public class ProjectService : CrudService<Project, CreateProjectDto, UpdateProjectDto, ProjectResponse>, IProjectService
+{
+    public ProjectService(IRepository<Project> repo) : base(repo) { }
+    protected override Project MapToEntity(CreateProjectDto dto) => dto.ToEntity();
+    protected override ProjectResponse MapToResponse(Project entity) => entity.ToResponse();
+    protected override void ApplyUpdate(Project entity, UpdateProjectDto dto) => entity.ApplyUpdate(dto);
+
+    public async Task<List<ProjectResponse>> GetByUserIdAsync(int userId)
+    {
+        var items = await Repository.FindAsync(p => p.UserId == userId);
+        return items.OrderBy(p => p.SortOrder).ThenBy(p => p.Name).Select(MapToResponse).ToList();
+    }
+}
+
 // ===== WorkTask Service =====
 public interface IWorkTaskService : ICrudService<WorkTask, CreateWorkTaskDto, UpdateWorkTaskDto, WorkTaskResponse>
 {
     Task<List<WorkTaskResponse>> GetByUserIdAsync(int userId);
-    Task<List<WorkTaskResponse>> GetByProjectAsync(int userId, string project);
+    Task<List<WorkTaskResponse>> GetByProjectIdAsync(int userId, int? projectId);
     Task<List<WorkTaskResponse>> GetByStatusAsync(int userId, WorkTaskStatus status);
 }
 
 public class WorkTaskService : CrudService<WorkTask, CreateWorkTaskDto, UpdateWorkTaskDto, WorkTaskResponse>, IWorkTaskService
 {
-    public WorkTaskService(IRepository<WorkTask> repo) : base(repo) { }
+    private readonly IRepository<Project> _projectRepo;
+
+    public WorkTaskService(IRepository<WorkTask> repo, IRepository<Project> projectRepo) : base(repo)
+    {
+        _projectRepo = projectRepo;
+    }
+
     protected override WorkTask MapToEntity(CreateWorkTaskDto dto) => dto.ToEntity();
     protected override WorkTaskResponse MapToResponse(WorkTask entity) => entity.ToResponse();
     protected override void ApplyUpdate(WorkTask entity, UpdateWorkTaskDto dto) => entity.ApplyUpdate(dto);
 
+    private async Task<Dictionary<int, string>> GetProjectMapAsync(IEnumerable<WorkTask> tasks)
+    {
+        var projectIds = tasks.Where(t => t.ProjectId.HasValue).Select(t => t.ProjectId!.Value).Distinct().ToList();
+        if (projectIds.Count == 0) return new();
+        var projects = await _projectRepo.FindAsync(p => projectIds.Contains(p.Id));
+        return projects.ToDictionary(p => p.Id, p => p.Name);
+    }
+
     public async Task<List<WorkTaskResponse>> GetByUserIdAsync(int userId)
     {
         var items = await Repository.FindAsync(w => w.UserId == userId);
-        return items.OrderByDescending(w => w.Priority).ThenBy(w => w.DueDate).Select(MapToResponse).ToList();
+        var projectMap = await GetProjectMapAsync(items);
+        return items.OrderByDescending(w => w.Priority).ThenBy(w => w.DueDate)
+            .Select(w => w.ToResponse(w.ProjectId.HasValue ? projectMap.GetValueOrDefault(w.ProjectId.Value) : null)).ToList();
     }
 
-    public async Task<List<WorkTaskResponse>> GetByProjectAsync(int userId, string project)
+    public async Task<List<WorkTaskResponse>> GetByProjectIdAsync(int userId, int? projectId)
     {
-        var items = await Repository.FindAsync(w => w.UserId == userId && w.Project == project);
-        return items.OrderByDescending(w => w.Priority).Select(MapToResponse).ToList();
+        var items = await Repository.FindAsync(w => w.UserId == userId && w.ProjectId == projectId);
+        var projectMap = await GetProjectMapAsync(items);
+        return items.OrderByDescending(w => w.Priority)
+            .Select(w => w.ToResponse(w.ProjectId.HasValue ? projectMap.GetValueOrDefault(w.ProjectId.Value) : null)).ToList();
     }
 
     public async Task<List<WorkTaskResponse>> GetByStatusAsync(int userId, WorkTaskStatus status)
     {
         var items = await Repository.FindAsync(w => w.UserId == userId && w.Status == status);
-        return items.OrderByDescending(w => w.Priority).Select(MapToResponse).ToList();
+        var projectMap = await GetProjectMapAsync(items);
+        return items.OrderByDescending(w => w.Priority)
+            .Select(w => w.ToResponse(w.ProjectId.HasValue ? projectMap.GetValueOrDefault(w.ProjectId.Value) : null)).ToList();
     }
 }
 
@@ -275,7 +315,12 @@ public interface IBlogPostService : ICrudService<BlogPost, CreateBlogPostDto, Up
 
 public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBlogPostDto, BlogPostResponse>, IBlogPostService
 {
-    public BlogPostService(IRepository<BlogPost> repo) : base(repo) { }
+    private readonly BlogPostRepository? _blogPostRepo;
+
+    public BlogPostService(IRepository<BlogPost> repo) : base(repo)
+    {
+        _blogPostRepo = repo as BlogPostRepository;
+    }
 
     protected override BlogPost MapToEntity(CreateBlogPostDto dto)
     {
@@ -296,6 +341,28 @@ public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBl
             entity.PublishedAt = DateTime.UtcNow;
         if (dto.Title != null)
             entity.Slug = GenerateSlug(dto.Title);
+    }
+
+    public override async Task<BlogPostResponse> CreateAsync(CreateBlogPostDto dto)
+    {
+        var entity = MapToEntity(dto);
+        entity = await Repository.AddAsync(entity);
+        if (_blogPostRepo != null && dto.Tags.Count > 0)
+            await _blogPostRepo.SyncTagsAsync(entity, dto.Tags);
+        var loaded = await Repository.GetByIdAsync(entity.Id);
+        return MapToResponse(loaded ?? entity);
+    }
+
+    public override async Task<BlogPostResponse?> UpdateAsync(int id, UpdateBlogPostDto dto)
+    {
+        var entity = await Repository.GetByIdAsync(id);
+        if (entity == null) return default;
+        ApplyUpdate(entity, dto);
+        entity = await Repository.UpdateAsync(entity);
+        if (_blogPostRepo != null && dto.Tags != null)
+            await _blogPostRepo.SyncTagsAsync(entity, dto.Tags);
+        var loaded = await Repository.GetByIdAsync(entity.Id);
+        return MapToResponse(loaded ?? entity);
     }
 
     public async Task<List<BlogPostResponse>> GetByUserIdAsync(int userId)
@@ -341,11 +408,14 @@ public class BlogPostService : CrudService<BlogPost, CreateBlogPostDto, UpdateBl
             query = query.Where(b =>
                 b.Title.ToLowerInvariant().Contains(kw) ||
                 (b.Content?.ToLowerInvariant().Contains(kw) ?? false) ||
-                (b.Tags?.ToLowerInvariant().Contains(kw) ?? false) ||
-                (b.Summary?.ToLowerInvariant().Contains(kw) ?? false));
+                (b.Summary?.ToLowerInvariant().Contains(kw) ?? false) ||
+                b.TagEntities.Any(t => t.Name.ToLowerInvariant().Contains(kw)) ||
+                (!b.TagEntities.Any() && b.Tags?.ToLowerInvariant().Contains(kw) == true));
         }
         if (!string.IsNullOrEmpty(tag))
-            query = query.Where(b => b.Tags != null && b.Tags.Split(',').Select(t => t.Trim()).Contains(tag, StringComparer.OrdinalIgnoreCase));
+            query = query.Where(b =>
+                b.TagEntities.Any(t => t.Name.Equals(tag, StringComparison.OrdinalIgnoreCase)) ||
+                (!b.TagEntities.Any() && b.Tags != null && b.Tags.Split(',').Select(t => t.Trim()).Contains(tag, StringComparer.OrdinalIgnoreCase)));
         if (!string.IsNullOrEmpty(category))
             query = query.Where(b => b.Category != null && b.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
 

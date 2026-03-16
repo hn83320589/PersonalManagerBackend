@@ -48,6 +48,20 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Email settings
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+var emailConfig = builder.Configuration.GetSection("Email").Get<EmailSettings>() ?? new EmailSettings();
+if (emailConfig.IsConfigured)
+{
+    builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+    Console.WriteLine("Email: SMTP 模式");
+}
+else
+{
+    builder.Services.AddScoped<IEmailService, NoOpEmailService>();
+    Console.WriteLine("Email: NoOp 模式（重設連結將輸出至 log）");
+}
+
 // FileStorage settings
 builder.Services.Configure<FileStorageSettings>(builder.Configuration.GetSection("FileStorage"));
 
@@ -170,13 +184,17 @@ if (useDatabase)
     builder.Services.AddScoped<IRepository<CalendarEvent>, EfRepository<CalendarEvent>>();
     builder.Services.AddScoped<IRepository<TodoItem>, EfRepository<TodoItem>>();
     builder.Services.AddScoped<IRepository<WorkTask>, EfRepository<WorkTask>>();
-    builder.Services.AddScoped<IRepository<BlogPost>, EfRepository<BlogPost>>();
+    builder.Services.AddScoped<BlogPostRepository>();
+    builder.Services.AddScoped<IRepository<BlogPost>>(sp => sp.GetRequiredService<BlogPostRepository>());
     builder.Services.AddScoped<IRepository<GuestBookEntry>, EfRepository<GuestBookEntry>>();
     builder.Services.AddScoped<IRepository<ContactMethod>, EfRepository<ContactMethod>>();
     builder.Services.AddScoped<IRepository<FileUpload>, EfRepository<FileUpload>>();
     builder.Services.AddScoped<IRepository<PortfolioAttachment>, EfRepository<PortfolioAttachment>>();
     builder.Services.AddScoped<IRepository<TimeEntry>, EfRepository<TimeEntry>>();
     builder.Services.AddScoped<IRepository<RefreshToken>, EfRepository<RefreshToken>>();
+    builder.Services.AddScoped<IRepository<Project>, EfRepository<Project>>();
+    builder.Services.AddScoped<IRepository<Tag>, EfRepository<Tag>>();
+    builder.Services.AddScoped<IRepository<PasswordResetToken>, EfRepository<PasswordResetToken>>();
 }
 else
 {
@@ -197,6 +215,9 @@ else
     builder.Services.AddScoped<IRepository<PortfolioAttachment>, JsonRepository<PortfolioAttachment>>();
     builder.Services.AddScoped<IRepository<TimeEntry>, JsonRepository<TimeEntry>>();
     builder.Services.AddScoped<IRepository<RefreshToken>, JsonRepository<RefreshToken>>();
+    builder.Services.AddScoped<IRepository<Project>, JsonRepository<Project>>();
+    builder.Services.AddScoped<IRepository<Tag>, JsonRepository<Tag>>();
+    builder.Services.AddScoped<IRepository<PasswordResetToken>, JsonRepository<PasswordResetToken>>();
 }
 
 // Services
@@ -209,6 +230,7 @@ builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<ICalendarEventService, CalendarEventService>();
 builder.Services.AddScoped<ITodoItemService, TodoItemService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IWorkTaskService, WorkTaskService>();
 builder.Services.AddScoped<IBlogPostService, BlogPostService>();
 builder.Services.AddScoped<IGuestBookEntryService, GuestBookEntryService>();

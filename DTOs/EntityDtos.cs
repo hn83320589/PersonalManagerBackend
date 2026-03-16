@@ -245,6 +245,7 @@ public class CreateCalendarEventDto
     public bool IsAllDay { get; set; }
     public bool IsPublic { get; set; }
     public string Color { get; set; } = string.Empty;
+    public string RecurrenceRule { get; set; } = string.Empty;
 }
 public class UpdateCalendarEventDto
 {
@@ -255,6 +256,7 @@ public class UpdateCalendarEventDto
     public bool? IsAllDay { get; set; }
     public bool? IsPublic { get; set; }
     public string? Color { get; set; }
+    public string? RecurrenceRule { get; set; }
 }
 public class CalendarEventResponse
 {
@@ -267,7 +269,36 @@ public class CalendarEventResponse
     public bool IsAllDay { get; set; }
     public bool IsPublic { get; set; }
     public string Color { get; set; } = string.Empty;
+    public string RecurrenceRule { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+}
+
+// ===== Project =====
+public class CreateProjectDto
+{
+    public int UserId { get; set; }
+    [Required] public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Color { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+}
+public class UpdateProjectDto
+{
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public string? Color { get; set; }
+    public int? SortOrder { get; set; }
+}
+public class ProjectResponse
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Color { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 // ===== TodoItem =====
@@ -309,7 +340,7 @@ public class CreateWorkTaskDto
     public int UserId { get; set; }
     [Required] public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string Project { get; set; } = string.Empty;
+    public int? ProjectId { get; set; }
     public WorkTaskPriority Priority { get; set; } = WorkTaskPriority.Medium;
     public WorkTaskStatus Status { get; set; } = WorkTaskStatus.Pending;
     public double EstimatedHours { get; set; }
@@ -320,7 +351,7 @@ public class UpdateWorkTaskDto
 {
     public string? Title { get; set; }
     public string? Description { get; set; }
-    public string? Project { get; set; }
+    public int? ProjectId { get; set; }
     public WorkTaskPriority? Priority { get; set; }
     public WorkTaskStatus? Status { get; set; }
     public double? EstimatedHours { get; set; }
@@ -335,7 +366,8 @@ public class WorkTaskResponse
     public int UserId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string Project { get; set; } = string.Empty;
+    public int? ProjectId { get; set; }
+    public string? ProjectName { get; set; }
     public WorkTaskPriority Priority { get; set; }
     public WorkTaskStatus Status { get; set; }
     public double EstimatedHours { get; set; }
@@ -355,7 +387,7 @@ public class CreateBlogPostDto
     public string Content { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public string Tags { get; set; } = string.Empty;
+    public List<string> Tags { get; set; } = new();
     public BlogPostStatus Status { get; set; } = BlogPostStatus.Draft;
     public bool IsPublic { get; set; } = true;
 }
@@ -365,7 +397,7 @@ public class UpdateBlogPostDto
     public string? Content { get; set; }
     public string? Summary { get; set; }
     public string? Category { get; set; }
-    public string? Tags { get; set; }
+    public List<string>? Tags { get; set; }
     public BlogPostStatus? Status { get; set; }
     public bool? IsPublic { get; set; }
     public DateTime? PublishedAt { get; set; }
@@ -379,7 +411,7 @@ public class BlogPostResponse
     public string Content { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public string Tags { get; set; } = string.Empty;
+    public List<string> Tags { get; set; } = new();
     public BlogPostStatus Status { get; set; }
     public bool IsPublic { get; set; }
     public int ViewCount { get; set; }

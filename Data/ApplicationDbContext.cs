@@ -23,6 +23,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<PortfolioAttachment> PortfolioAttachments => Set<PortfolioAttachment>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +64,19 @@ public class ApplicationDbContext : DbContext
             .Property(e => e.Type)
             .HasConversion<string>()
             .HasMaxLength(20);
+
+        // WorkTask → Project FK (nullable, set null on delete)
+        modelBuilder.Entity<WorkTask>()
+            .HasOne<Project>()
+            .WithMany()
+            .HasForeignKey(w => w.ProjectId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // BlogPost ↔ Tag many-to-many
+        modelBuilder.Entity<BlogPost>()
+            .HasMany(b => b.TagEntities)
+            .WithMany()
+            .UsingEntity("BlogPostTags");
 
         // Unique constraints
         modelBuilder.Entity<User>()

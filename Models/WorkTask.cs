@@ -34,8 +34,7 @@ public class WorkTask
 
     public string Description { get; set; } = string.Empty;
 
-    [StringLength(100)]
-    public string Project { get; set; } = string.Empty;
+    public int? ProjectId { get; set; }
 
     public WorkTaskPriority Priority { get; set; } = WorkTaskPriority.Medium;
     public WorkTaskStatus Status { get; set; } = WorkTaskStatus.Pending;

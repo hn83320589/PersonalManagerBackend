@@ -14,13 +14,13 @@ public class EfRepository<T> : IRepository<T> where T : class
         _set = context.Set<T>();
     }
 
-    public async Task<List<T>> GetAllAsync() =>
+    public virtual async Task<List<T>> GetAllAsync() =>
         await _set.ToListAsync();
 
-    public async Task<T?> GetByIdAsync(int id) =>
+    public virtual async Task<T?> GetByIdAsync(int id) =>
         await _set.FindAsync(id);
 
-    public async Task<List<T>> FindAsync(Func<T, bool> predicate) =>
+    public virtual async Task<List<T>> FindAsync(Func<T, bool> predicate) =>
         await Task.FromResult(_set.AsEnumerable().Where(predicate).ToList());
 
     public async Task<T> AddAsync(T entity)

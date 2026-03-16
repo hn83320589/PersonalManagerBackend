@@ -42,13 +42,13 @@ public class WorkTasksController : BaseApiController
         return Ok(ApiResponse<List<WorkTaskResponse>>.Ok(await _service.GetByUserIdAsync(userId)));
     }
 
-    [HttpGet("user/{userId}/project/{project}")]
-    public async Task<IActionResult> GetByProject(int userId, string project)
+    [HttpGet("user/{userId}/project/{projectId:int}")]
+    public async Task<IActionResult> GetByProject(int userId, int projectId)
     {
         var currentUserId = GetCurrentUserId();
         if (currentUserId == null) return Unauthorized(ApiResponse.Fail("Unauthorized"));
         if (userId != currentUserId.Value) return StatusCode(403, ApiResponse.Fail("Forbidden"));
-        return Ok(ApiResponse<List<WorkTaskResponse>>.Ok(await _service.GetByProjectAsync(userId, project)));
+        return Ok(ApiResponse<List<WorkTaskResponse>>.Ok(await _service.GetByProjectIdAsync(userId, projectId)));
     }
 
     [HttpGet("user/{userId}/status/{status}")]

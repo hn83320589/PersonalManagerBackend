@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using PersonalManager.Api.Auth;
 using PersonalManager.Api.DTOs;
+using PersonalManager.Api.Settings;
 
 namespace PersonalManager.Api.Controllers;
 
@@ -11,8 +13,13 @@ namespace PersonalManager.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _auth;
+    private readonly EmailSettings _emailSettings;
 
-    public AuthController(IAuthService auth) => _auth = auth;
+    public AuthController(IAuthService auth, IOptions<EmailSettings> emailSettings)
+    {
+        _auth = auth;
+        _emailSettings = emailSettings.Value;
+    }
 
     [EnableRateLimiting("auth")]
     [HttpPost("login")]
@@ -59,5 +66,24 @@ public class AuthController : ControllerBase
     {
         await _auth.RevokeAsync(request.RefreshToken);
         return Ok(ApiResponse.Ok("Logged out"));
+    }
+
+    [EnableRateLimiting("auth")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        await _auth.ForgotPasswordAsync(request.Email, _emailSettings.FrontendBaseUrl);
+        // Always return 200 to avoid email enumeration
+        return Ok(ApiResponse.Ok("若該 Email 存在，重設連結已寄出"));
+    }
+
+    [EnableRateLimiting("auth")]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        var success = await _auth.ResetPasswordAsync(request.Token, request.NewPassword);
+        if (!success)
+            return BadRequest(ApiResponse.Fail("重設連結無效或已過期"));
+        return Ok(ApiResponse.Ok("密碼重設成功"));
     }
 }

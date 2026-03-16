@@ -198,7 +198,6 @@ public static class DatabaseSeeder
                 CompletedAt = null,
                 EstimatedHours = 8.0,
                 ActualHours = 0.0,
-                Project = "Personal Manager",
                 Tags = "資料庫,設計,架構",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -214,7 +213,6 @@ public static class DatabaseSeeder
                 CompletedAt = null,
                 EstimatedHours = 16.0,
                 ActualHours = 0.0,
-                Project = "Personal Manager",
                 Tags = "認證,JWT,安全性",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow

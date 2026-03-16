@@ -334,6 +334,49 @@ Jwt__SecretKey = <隨機密鑰>
 
 ## 最新異動記錄
 
+### 2026/03/16（密碼重設功能）
+- **密碼重設功能實作完成**：
+  - 新增 `Models/PasswordResetToken.cs`（Id、UserId、Token、ExpiresAt、IsUsed、CreatedAt）
+  - 新增 `Settings/EmailSettings.cs`（SmtpHost、SmtpPort、UseSsl、Username、Password、FromAddress、FromName、FrontendBaseUrl、`IsConfigured` 計算屬性）
+  - 新增 `Services/EmailService.cs`：`IEmailService` 介面 + `SmtpEmailService`（System.Net.Mail.SmtpClient）+ `NoOpEmailService`（SMTP 未設定時 log 至 Warning）
+  - 新增 `Data/JsonData/PasswordResetTokens.json`（空陣列）
+  - `DTOs/AuthDtos.cs`：新增 `ForgotPasswordRequest`（`[EmailAddress]`）、`ResetPasswordRequest`（`[StringLength(100, MinimumLength = 6)]`）
+  - `Data/ApplicationDbContext.cs`：新增 `DbSet<PasswordResetToken>`
+  - `Auth/AuthService.cs`：介面加 `ForgotPasswordAsync`/`ResetPasswordAsync`；實作注入 `IRepository<PasswordResetToken>` + `IEmailService`；`ForgotPasswordAsync` 防枚舉攻擊（user 不存在也回 true）；token 使用 URL-safe Base64（`+→-`、`/→_`、去除 `=`）；`ResetPasswordAsync` 驗證 `!IsUsed && ExpiresAt > UtcNow` 後 BCrypt 重設密碼並標記 token 已使用
+  - `Controllers/AuthController.cs`：注入 `IOptions<EmailSettings>`；新增 `POST /api/auth/forgot-password`（rate-limited "auth"，永遠回 200）；`POST /api/auth/reset-password`（rate-limited "auth"）
+  - `appsettings.json`：新增 `Email` section（空占位符，生產填 Zeabur 環境變數 `Email__SmtpHost` 等）
+  - `Program.cs`：`Configure<EmailSettings>`；讀取 `Email` config 判斷 IsConfigured → `SmtpEmailService`（SMTP 模式）或 `NoOpEmailService`（NoOp 模式）；EF + JSON 兩個區塊各加 `IRepository<PasswordResetToken>`
+  - EF Migration：`AddPasswordResetToken`（新增 `PasswordResetTokens` 資料表）
+  - **Zeabur 生產環境變數**（SMTP 才需要設定）：`Email__SmtpHost`、`Email__SmtpPort`、`Email__UseSsl`、`Email__Username`、`Email__Password`、`Email__FromAddress`、`Email__FrontendBaseUrl`
+
+### 2026/03/16（DB Schema 正規化）
+- **三項 DB Schema 正規化完成**：
+  - **CalendarEvent.RecurrenceRule**：`Models/CalendarEvent.cs` 新增 `RecurrenceRule` 欄位；DTOs、Mappings 同步更新
+  - **WorkTask.Project 正規化**：
+    - 新增 `Models/Project.cs`；`WorkTask.Project` (string) 改為 `WorkTask.ProjectId` (int?)
+    - `Data/ApplicationDbContext.cs`：`DbSet<Project>` + FK 設定（DeleteBehavior.SetNull）
+    - 新增 `Services/EntityServices.cs`：`IProjectService`/`ProjectService`
+    - 新增 `Controllers/ProjectsController.cs`（GET/POST/PUT/DELETE，全部需 auth）
+    - `Controllers/WorkTasksController.cs`：`GetByProject` 端點改為 `GET .../project/{projectId:int}`
+    - 新增 `Data/JsonData/Projects.json`（空陣列）
+    - `Program.cs`：DI 新增 `IProjectService`、`IRepository<Project>`（EF + JSON 兩區塊）
+  - **BlogPost.Tags 正規化**：
+    - 新增 `Models/Tag.cs`；`BlogPost` 新增 `ICollection<Tag> TagEntities`（JsonIgnore），保留 `string Tags` 供 JSON fallback
+    - `Data/ApplicationDbContext.cs`：`DbSet<Tag>` + BlogPost↔Tag 多對多 `UsingEntity("BlogPostTags")`
+    - 新增 `Repositories/BlogPostRepository.cs`（覆寫 GetAll/GetById/FindAsync 以 Include TagEntities）+ `SyncTagsAsync`
+    - `Repositories/EfRepository.cs`：`GetAllAsync/GetByIdAsync/FindAsync` 改為 `virtual`
+    - `Services/EntityServices.cs`：`BlogPostService` 在 Create/Update 時呼叫 `SyncTagsAsync`；`WorkTaskService` 批次載入 Project 名稱避免 N+1
+    - `Program.cs`：DB 模式改用 `BlogPostRepository`（實作 `IRepository<BlogPost>`）；JSON 模式用 `JsonRepository<BlogPost>`
+    - 新增 `Data/JsonData/Tags.json`（空陣列）
+  - **EF Migration**：`20260316024850_AddRecurrenceRuleProjectTag`
+    - `CalendarEvents` 新增 `RecurrenceRule` 欄位
+    - `WorkTasks` drop `Project` (string)、新增 `ProjectId` (int?) + FK
+    - 新增 `Projects` 資料表
+    - 新增 `Tags` 資料表
+    - 新增 `BlogPostTags` 多對多 join 資料表
+  - **BlogPostsController** tag 相關端點更新（tags 現為 `List<string>`，不需 Split）
+  - **DatabaseSeeder** 移除 `WorkTask.Project` 字串欄位
+
 ### 2026/03/16（單元測試）
 - **後端單元測試專案建立**：
   - 新增 `tests/PersonalManager.Tests.csproj`（xUnit 2.9.3 + Moq 4.20.72，引用主專案）

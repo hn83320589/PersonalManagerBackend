@@ -46,7 +46,7 @@ public class BlogPostsController : BaseApiController
         if (!string.IsNullOrEmpty(tag))
         {
             posts = posts.Where(p => p.Tags != null &&
-                p.Tags.Split(',').Select(t => t.Trim()).Contains(tag, StringComparer.OrdinalIgnoreCase))
+                p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
                 .ToList();
         }
         return Ok(ApiResponse<List<BlogPostResponse>>.Ok(posts));
@@ -64,8 +64,8 @@ public class BlogPostsController : BaseApiController
     {
         var posts = await _service.GetPublicByUserIdAsync(userId);
         var tags = posts
-            .Where(p => !string.IsNullOrEmpty(p.Tags))
-            .SelectMany(p => p.Tags.Split(',').Select(t => t.Trim()))
+            .Where(p => p.Tags != null && p.Tags.Count > 0)
+            .SelectMany(p => p.Tags)
             .Where(t => !string.IsNullOrEmpty(t))
             .Distinct()
             .OrderBy(t => t)

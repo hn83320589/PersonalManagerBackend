@@ -30,7 +30,10 @@ public class BlogPost
     [StringLength(50)]
     public string Category { get; set; } = string.Empty;
 
-    public string Tags { get; set; } = string.Empty;
+    public string Tags { get; set; } = string.Empty;  // legacy comma-separated, kept for JSON fallback
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public ICollection<Tag> TagEntities { get; set; } = new List<Tag>();
 
     public BlogPostStatus Status { get; set; } = BlogPostStatus.Draft;
     public bool IsPublic { get; set; } = true;

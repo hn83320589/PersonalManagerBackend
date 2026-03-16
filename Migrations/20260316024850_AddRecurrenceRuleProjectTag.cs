@@ -26,7 +26,8 @@ namespace PersonalManager.Api.Migrations
                 name: "RecurrenceRule",
                 table: "CalendarEvents",
                 type: "longtext",
-                nullable: false)
+                nullable: false,
+                defaultValue: "")
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(

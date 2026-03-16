@@ -311,7 +311,7 @@ public static class DatabaseSeeder
             "CREATE INDEX IF NOT EXISTS `idx_worktasks_status` ON `WorkTasks`(`Status`)",
             "CREATE INDEX IF NOT EXISTS `idx_worktasks_priority` ON `WorkTasks`(`Priority`)",
             "CREATE INDEX IF NOT EXISTS `idx_worktasks_duedate` ON `WorkTasks`(`DueDate`)",
-            "CREATE INDEX IF NOT EXISTS `idx_worktasks_project` ON `WorkTasks`(`Project`)",
+            "CREATE INDEX IF NOT EXISTS `idx_worktasks_projectid` ON `WorkTasks`(`ProjectId`)",
 
             "CREATE INDEX IF NOT EXISTS `idx_todoitems_userid` ON `TodoItems`(`UserId`)",
             "CREATE INDEX IF NOT EXISTS `idx_todoitems_status` ON `TodoItems`(`Status`)",
